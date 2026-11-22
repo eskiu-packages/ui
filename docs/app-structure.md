@@ -39,6 +39,30 @@ A small app can start with `src/main.esk`, `src/app.esk`, `src/model.esk` and a 
 folder, and grow into the rest. Keep each file under about 600 lines: when one gets longer,
 split it by topic and import the parts in order.
 
+## Creating and running it
+
+Start with `ui new NAME` (or from ui-starter): it writes every file above with valid values.
+When an agent writes the files by hand instead:
+
+- The package name in `eskiu.toml` uses letters, digits and `_` only (`pokedex_app`, not
+  `pokedex-app`). The name people see goes in `ui.toml` (`name = "Pokédex"`), where any text is
+  fine.
+- `src/main.esk` has no `main`: it defines `void ui_app_start(int which)`, which mounts `App`,
+  and `void ui_app_stop() {}`. Each host (web, macOS, iOS...) calls them.
+- Fetch the dependencies with `eskiuc fetch` (it writes `eskiu.lock`), then `ui run web` or
+  `ui build TARGET`. Do not run `eskiuc build` on an app: it links a command-line program and
+  fails with an undefined `_main`.
+
+```
+[package]
+name = "pokedex_app"
+version = "0.1.0"
+main = "src/main.esk"
+
+[deps]
+ui = { git = "https://github.com/eskiu-packages/ui" }
+```
+
 ## What may use what
 
 Dependencies go one way, so each layer can change without touching the ones under it:
