@@ -75,7 +75,7 @@ void Project_find(Project* self) {
     String lock;
     defer String_free(&lock);
     if (fs_read_text(join(dir.data, "eskiu.lock"), &lock) != 0) {
-        fail("ui: no eskiu.lock: run eskiuc build or eskiuc fetch once");
+        fail("ui: no eskiu.lock: run eskiuc fetch once");
     }
     List<String> lines;
     defer fs_list_free(&lines);
