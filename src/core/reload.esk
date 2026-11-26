@@ -33,7 +33,7 @@ struct _UiReloadState {
     String out;
 }
 
-_UiReloadState ui_rl;
+_UiReloadState _ui_rl;
 
 // The name a signal's type is saved under (_ui_driver_value_type's codes), or null when its
 // values are not saved (internal).
@@ -101,15 +101,15 @@ void _ui_reload_save_node(*Node node) {
         String value;
         if (!_ui_reload_value_text(slot, &value)) { String_free(&value); continue; }
         if (slot.key != null) {
-            String_append(&ui_rl.out, "keyed\t");
-            _ui_reload_escape(&ui_rl.out, slot.key);
+            String_append(&_ui_rl.out, "keyed\t");
+            _ui_reload_escape(&_ui_rl.out, slot.key);
         } else {
             if (path.len == 0) { ui_node_path(node, &path); }
-            String_append(&ui_rl.out, "signal\t");
-            _ui_reload_escape(&ui_rl.out, path.data);
-            String_appendf(&ui_rl.out, "\t%d", at);
+            String_append(&_ui_rl.out, "signal\t");
+            _ui_reload_escape(&_ui_rl.out, path.data);
+            String_appendf(&_ui_rl.out, "\t%d", at);
         }
-        String_appendf(&ui_rl.out, "\t%s\t%s\n", type, value.data == null ? "" : value.data);
+        String_appendf(&_ui_rl.out, "\t%s\t%s\n", type, value.data == null ? "" : value.data);
         String_free(&value);
     }
     for (i in 0..node.children.size) { _ui_reload_save_node(node.children.data[i]); }
@@ -118,37 +118,37 @@ void _ui_reload_save_node(*Node node) {
 // The snapshot of the running app (the text is the core's, valid until the next call): the
 // routes of the router the platform follows and the signals of the mounted scopes.
 string ui_reload_snapshot() {
-    String_clear(&ui_rl.out);
-    String_append(&ui_rl.out, "ui-reload 1\n");
-    if (ui == null || ui.root == null) { return ui_rl.out.data; }
+    String_clear(&_ui_rl.out);
+    String_append(&_ui_rl.out, "ui-reload 1\n");
+    if (ui == null || ui.root == null) { return _ui_rl.out.data; }
     if (ui.router != null) {
         for (i in 0..ui.router.stack.size) {
-            String_append(&ui_rl.out, "route\t");
-            _ui_reload_escape(&ui_rl.out, ui.router.stack.data[i].data);
-            String_append(&ui_rl.out, "\n");
+            String_append(&_ui_rl.out, "route\t");
+            _ui_reload_escape(&_ui_rl.out, ui.router.stack.data[i].data);
+            String_append(&_ui_rl.out, "\n");
         }
     }
     _ui_reload_save_node(ui.root);
-    return ui_rl.out.data;
+    return _ui_rl.out.data;
 }
 
 // Frees what the snapshot holds; nothing is restored after it (internal).
 void _ui_reload_drop() {
-    for (i in 0..ui_rl.routes.size) { String_free(&ui_rl.routes.data[i]); }
-    ui_rl.routes.free();
-    for (i in 0..ui_rl.signals.size) {
-        *_UiSavedSignal saved = &ui_rl.signals.data[i];
+    for (i in 0.._ui_rl.routes.size) { String_free(&_ui_rl.routes.data[i]); }
+    _ui_rl.routes.free();
+    for (i in 0.._ui_rl.signals.size) {
+        *_UiSavedSignal saved = &_ui_rl.signals.data[i];
         String_free(&saved.path); String_free(&saved.key); String_free(&saved.type); String_free(&saved.value);
     }
-    ui_rl.signals.free();
-    ui_rl.active = false;
-    ui_rl.routes_taken = false;
+    _ui_rl.signals.free();
+    _ui_rl.active = false;
+    _ui_rl.routes_taken = false;
 }
 
 // Frees the snapshot and its text, at shutdown (internal).
 void _ui_reload_shutdown() {
     _ui_reload_drop();
-    String_free(&ui_rl.out);
+    String_free(&_ui_rl.out);
 }
 
 // Splits a snapshot line at its tabs, unescaping each field (internal).
@@ -171,7 +171,7 @@ void _ui_reload_fields(string line, int64 n, List<String>* fields) {
 void ui_reload_load(string text) {
     _ui_reload_drop();
     if (text == null || strncmp(text, "ui-reload 1\n", 12) != 0) { return; }
-    ui_rl.active = true;
+    _ui_rl.active = true;
     int64 at = 12;
     while (text[at] != 0) {
         int64 end = at;
@@ -180,7 +180,7 @@ void ui_reload_load(string text) {
         _ui_reload_fields(&text[at], end - at, &fields);
         string kind = fields.size > 0 ? fields.data[0].data : null;
         if (kind != null && strcmp(kind, "route") == 0 && fields.size == 2) {
-            ui_rl.routes.push(fields.data[1]);
+            _ui_rl.routes.push(fields.data[1]);
             fields.data[1] = String{};
         } else if (kind != null && strcmp(kind, "signal") == 0 && fields.size == 5) {
             _UiSavedSignal saved;
@@ -189,14 +189,14 @@ void ui_reload_load(string text) {
             saved.type = fields.data[3];
             saved.value = fields.data[4];
             fields.data[1] = String{}; fields.data[3] = String{}; fields.data[4] = String{};
-            ui_rl.signals.push(saved);
+            _ui_rl.signals.push(saved);
         } else if (kind != null && strcmp(kind, "keyed") == 0 && fields.size == 4) {
             _UiSavedSignal saved;
             saved.key = fields.data[1];
             saved.type = fields.data[2];
             saved.value = fields.data[3];
             fields.data[1] = String{}; fields.data[2] = String{}; fields.data[3] = String{};
-            ui_rl.signals.push(saved);
+            _ui_rl.signals.push(saved);
         }
         for (i in 0..fields.size) { String_free(&fields.data[i]); }
         fields.free();
@@ -206,21 +206,21 @@ void ui_reload_load(string text) {
 
 // The first input after a reload (a press, an edit, a toggle, back): from then on a scope that
 // mounts is new, so nothing more is restored (internal).
-void _ui_reload_input() { if (ui_rl.active) { _ui_reload_drop(); } }
+void _ui_reload_input() { if (_ui_rl.active) { _ui_reload_drop(); } }
 
 // The router the platform follows takes the saved routes, once (internal).
 void _ui_reload_routes(*Router router) {
-    if (!ui_rl.active || ui_rl.routes_taken || ui_rl.routes.size == 0) { return; }
-    ui_rl.routes_taken = true;
+    if (!_ui_rl.active || _ui_rl.routes_taken || _ui_rl.routes.size == 0) { return; }
+    _ui_rl.routes_taken = true;
     while (router.stack.size > 1) {
         ui_route_drop(router.stack.data[router.stack.size - 1]);
         router.stack.size--;
     }
     ui_route_drop(router.stack.data[0]);
     router.stack.size = 0;
-    for (i in 0..ui_rl.routes.size) {
+    for (i in 0.._ui_rl.routes.size) {
         String route;
-        String_from(&route, ui_rl.routes.data[i].data);
+        String_from(&route, _ui_rl.routes.data[i].data);
         router.stack.push(route);
     }
     _ui_route_changed(router);
@@ -230,13 +230,13 @@ void _ui_reload_routes(*Router router) {
 // `key` or by the scope's path and the slot's index among its signals; null when there is
 // none. A record whose type is not the signal's is used up and not restored (internal).
 *_UiSavedSignal _ui_reload_find(*Slot slot, string key) {
-    if (!ui_rl.active || ui_rl.signals.size == 0) { return null; }
+    if (!_ui_rl.active || _ui_rl.signals.size == 0) { return null; }
     string type = slot.kind == 3 ? "text" : _ui_reload_type(slot.vtype);
     if (type == null) { return null; }
     *_UiSavedSignal found = null;
     if (key != null) {
-        for (i in 0..ui_rl.signals.size) {
-            *_UiSavedSignal saved = &ui_rl.signals.data[i];
+        for (i in 0.._ui_rl.signals.size) {
+            *_UiSavedSignal saved = &_ui_rl.signals.data[i];
             if (!saved.used && saved.key.len > 0 && strcmp(saved.key.data, key) == 0) { found = saved; break; }
         }
     } else {
@@ -249,8 +249,8 @@ void _ui_reload_routes(*Router router) {
         String path;
         defer String_free(&path);
         ui_node_path(node, &path);
-        for (i in 0..ui_rl.signals.size) {
-            *_UiSavedSignal saved = &ui_rl.signals.data[i];
+        for (i in 0.._ui_rl.signals.size) {
+            *_UiSavedSignal saved = &_ui_rl.signals.data[i];
             if (!saved.used && saved.key.len == 0 && saved.index == index && String_eq(&saved.path, &path) == 1) {
                 found = saved;
                 break;

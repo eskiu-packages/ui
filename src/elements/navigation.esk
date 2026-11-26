@@ -32,19 +32,19 @@ void _ui_route_text(string path, String* out) {
 // leaves its router's stack.
 struct RouteParams { string route; String pattern; List<String> values; }
 
-List<*RouteParams> ui_route_params;
+List<*RouteParams> _ui_route_params;
 
 // Frees the params route_param kept for `route` (internal).
 void _ui_route_params_drop(string route) {
-    for (int i = ui_route_params.size - 1; i >= 0; i--) {
-        *RouteParams entry = ui_route_params.data[i];
+    for (int i = _ui_route_params.size - 1; i >= 0; i--) {
+        *RouteParams entry = _ui_route_params.data[i];
         if (entry.route != route) { continue; }
         String_free(&entry.pattern);
         route_params_free(&entry.values);
         free(entry);
-        ui_route_params.remove(i);
+        _ui_route_params.remove(i);
     }
-    if (ui_route_params.size == 0) { ui_route_params.free(); }
+    if (_ui_route_params.size == 0) { _ui_route_params.free(); }
 }
 
 // Free it after the UI that shows it is shut down (in ui_app_stop).
@@ -266,8 +266,8 @@ bool route_match(string pattern, string path, List<String>* params) {
 // blocks can keep it (route_match's params are freed by the caller, before the blocks run).
 // A route that is not a router's is matched again on each call.
 string route_param(string pattern, string route, int index) {
-    for (i in 0..ui_route_params.size) {
-        *RouteParams entry = ui_route_params.data[i];
+    for (i in 0.._ui_route_params.size) {
+        *RouteParams entry = _ui_route_params.data[i];
         if (entry.route == route && String_eq_cstr(&entry.pattern, pattern) == 1) {
             return index >= 0 && index < entry.values.size ? entry.values.data[index].data : null;
         }
@@ -281,7 +281,7 @@ string route_param(string pattern, string route, int index) {
     entry.route = route;
     String_from(&entry.pattern, pattern);
     entry.values = values;
-    ui_route_params.push(entry);
+    _ui_route_params.push(entry);
     return index >= 0 && index < values.size ? entry.values.data[index].data : null;
 }
 

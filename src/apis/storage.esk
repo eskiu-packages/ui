@@ -3,16 +3,16 @@
 
 // The app's own data directory ("" on the web, which has none): the host reports it before
 // the app starts, so ui_app_start may read from it. <fs> works in it.
-string ui_data_dir() { return ui_data_path == null ? "" : ui_data_path; }
+string ui_data_dir() { return _ui_data_path == null ? "" : _ui_data_path; }
 
 // The host's side: the app's data directory (copied).
 void ui_set_data_dir(string path) {
-    free(ui_data_path);
-    ui_data_path = path == null ? null : ui_copy(path);
+    free(_ui_data_path);
+    _ui_data_path = path == null ? null : ui_copy(path);
 }
 
 fn(string)->string ui_asset_host;
-bool ui_has_asset_host;
+bool _ui_has_asset_host;
 
 // A file of the app's assets/ ("sprites/atlas.webp") as a path <fs> and the packages that
 // read files (<canvas>, <audio>) can open: in the bundle on iOS, copied out of the APK into
@@ -25,21 +25,21 @@ string ui_asset_path(string name) {
     string updated = ui_update_source(name);
     if (updated != name) { return ui_copy(updated); }
 #endif
-    if (!ui_has_asset_host || name == null) { return null; }
+    if (!_ui_has_asset_host || name == null) { return null; }
     return ui_asset_host(name);
 }
 
 // The host's lookup for ui_asset_path, from hosts/bridge.esk.
 void ui_set_asset_host(escaping fn(string)->string lookup) {
     ui_asset_host = lookup;
-    ui_has_asset_host = true;
+    _ui_has_asset_host = true;
 }
 
 // Every key and value, loaded on first use and written whole on each change: in a file in
 // the data directory, or in the page's localStorage on the web. Meant for settings and small
 // state; a large or structured store belongs in a file of its own.
-List<_NativePair> ui_store;
-bool ui_store_loaded;
+List<_NativePair> _ui_store;
+bool _ui_store_loaded;
 
 #ifdef __wasm__
 extern string ui_host_storage_load();
@@ -84,17 +84,17 @@ string ui_store_field(string text, int* at) {
 // The file ui_storage keeps its values in (ui-storage.tsv in the data directory), a string
 // the caller frees, or null when there is no data directory (internal).
 string _ui_store_path() {
-    if (ui_data_path == null || ui_data_path[0] == 0) { return null; }
+    if (_ui_data_path == null || _ui_data_path[0] == 0) { return null; }
     String path;
-    String_appendf(&path, "%s/ui-storage.tsv", ui_data_path);
+    String_appendf(&path, "%s/ui-storage.tsv", _ui_data_path);
     return path.data;
 }
 
 // Reads the saved values on first use: from the file, or the browser's storage on the web
 // (internal).
 void _ui_store_load() {
-    if (ui_store_loaded) { return; }
-    ui_store_loaded = true;
+    if (_ui_store_loaded) { return; }
+    _ui_store_loaded = true;
     string text = null;
 #ifdef __wasm__
     text = ui_host_storage_load();
@@ -119,7 +119,7 @@ void _ui_store_load() {
         if (text[at] == '\t') { at++; }
         string value = ui_store_field(text, &at);
         if (text[at] == '\n') { at++; }
-        if (key[0] != 0) { ui_store.push(_NativePair{key, value}); } else { free(key); free(value); }
+        if (key[0] != 0) { _ui_store.push(_NativePair{key, value}); } else { free(key); free(value); }
     }
     free(text);
 }
@@ -130,10 +130,10 @@ void _ui_store_save() {
     String text;
     defer String_free(&text);
     String_append(&text, "");
-    for (i in 0..ui_store.size) {
-        ui_store_escape(&text, ui_store.data[i].name);
+    for (i in 0.._ui_store.size) {
+        ui_store_escape(&text, _ui_store.data[i].name);
         String_append(&text, "\t");
-        ui_store_escape(&text, ui_store.data[i].value);
+        ui_store_escape(&text, _ui_store.data[i].value);
         String_append(&text, "\n");
     }
 #ifdef __wasm__
@@ -144,7 +144,7 @@ void _ui_store_save() {
     // Written beside it, then renamed over it: a crash leaves the old or the new file.
     String temporary;
     String_appendf(&temporary, "%s.tmp", path);
-    fs_mkdir_p(ui_data_path);
+    fs_mkdir_p(_ui_data_path);
     if (fs_write_text(temporary.data, text.data) == 0) { fs_rename(temporary.data, path); }
     String_free(&temporary);
     free(path);
@@ -153,7 +153,7 @@ void _ui_store_save() {
 
 // The index of `key` among the loaded values, or -1 (internal).
 int _ui_store_find(string key) {
-    for (i in 0..ui_store.size) { if (strcmp(ui_store.data[i].name, key) == 0) { return i; } }
+    for (i in 0.._ui_store.size) { if (strcmp(_ui_store.data[i].name, key) == 0) { return i; } }
     return -1;
 }
 
@@ -161,7 +161,7 @@ int _ui_store_find(string key) {
 string ui_storage_get(string key) {
     _ui_store_load();
     int at = _ui_store_find(key);
-    return at < 0 ? null : ui_store.data[at].value;
+    return at < 0 ? null : _ui_store.data[at].value;
 }
 
 // Saves `value` (null: "") under `key`, replacing what was there, and writes the store at
@@ -170,8 +170,8 @@ void ui_storage_set(string key, string value) {
     _ui_store_load();
     int at = _ui_store_find(key);
     string copy = ui_copy(value == null ? "" : value);
-    if (at < 0) { ui_store.push(_NativePair{ui_copy(key), copy}); }
-    else { free(ui_store.data[at].value); ui_store.data[at].value = copy; }
+    if (at < 0) { _ui_store.push(_NativePair{ui_copy(key), copy}); }
+    else { free(_ui_store.data[at].value); _ui_store.data[at].value = copy; }
     _ui_store_save();
 }
 
@@ -180,14 +180,14 @@ void ui_storage_remove(string key) {
     _ui_store_load();
     int at = _ui_store_find(key);
     if (at < 0) { return; }
-    free(ui_store.data[at].name); free(ui_store.data[at].value);
-    ui_store.remove(at);
+    free(_ui_store.data[at].name); free(_ui_store.data[at].value);
+    _ui_store.remove(at);
     _ui_store_save();
 }
 
 // Forget the loaded entries (the next use loads them again); for tests and shutdown.
 void ui_storage_unload() {
-    _ui_free_pairs(&ui_store);
-    ui_store = List<_NativePair>{};
-    ui_store_loaded = false;
+    _ui_free_pairs(&_ui_store);
+    _ui_store = List<_NativePair>{};
+    _ui_store_loaded = false;
 }

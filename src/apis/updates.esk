@@ -36,33 +36,33 @@ struct _UiUpdater {
     *Signal<int> changed;
 }
 
-_UiUpdater ui_updater;
+_UiUpdater _ui_updater;
 
 // The version of the bundle the app uses ("" with the assets it was built with).
 string ui_update_version() {
-    if (ui_updater.changed != null) { ui_updater.changed.get(); }
-    String_clear(&ui_updater.version);
-    if (ui_updater.active.version > 0) { String_appendf(&ui_updater.version, "%lld", ui_updater.active.version); }
-    return ui_updater.version.data == null ? "" : ui_updater.version.data;
+    if (_ui_updater.changed != null) { _ui_updater.changed.get(); }
+    String_clear(&_ui_updater.version);
+    if (_ui_updater.active.version > 0) { String_appendf(&_ui_updater.version, "%lld", _ui_updater.active.version); }
+    return _ui_updater.version.data == null ? "" : _ui_updater.version.data;
 }
 
 // The version of a newer bundle downloaded and checked, which the app uses from its next start
 // or after ui_update_apply; "" when there is none. A component reading it renders again when
 // one arrives.
 string ui_update_ready() {
-    if (ui_updater.changed != null) { ui_updater.changed.get(); }
-    if (ui_updater.ready_version <= 0) { return ""; }
-    String_clear(&ui_updater.ready_shown);
-    String_appendf(&ui_updater.ready_shown, "%lld", ui_updater.ready_version);
-    return ui_updater.ready_shown.data;
+    if (_ui_updater.changed != null) { _ui_updater.changed.get(); }
+    if (_ui_updater.ready_version <= 0) { return ""; }
+    String_clear(&_ui_updater.ready_shown);
+    String_appendf(&_ui_updater.ready_shown, "%lld", _ui_updater.ready_version);
+    return _ui_updater.ready_shown.data;
 }
 
 // Why the last check did not install a bundle ("" when it did, or found nothing newer): a
 // failed download, a signature or a hash that does not match. The check runs again at the
 // next start. Reading it subscribes, as ui_update_ready.
 string ui_update_error() {
-    if (ui_updater.changed != null) { ui_updater.changed.get(); }
-    return ui_updater.error.data == null ? "" : ui_updater.error.data;
+    if (_ui_updater.changed != null) { _ui_updater.changed.get(); }
+    return _ui_updater.error.data == null ? "" : _ui_updater.error.data;
 }
 
 // Frees a bundle's files (internal).
@@ -240,11 +240,11 @@ bool _ui_update_locate(UiUpdateBundle* bundle) {
 // it (iOS and Android), else `name` itself. The path is the updater's, valid until the next
 // update; reading it subscribes, so an Image shows a bundle applied while it runs.
 string ui_update_source(string name) {
-    if (name == null || ui_updater.changed == null) { return name; }
-    ui_updater.changed.get();
+    if (name == null || _ui_updater.changed == null) { return name; }
+    _ui_updater.changed.get();
 #ifndef __wasm__
-    for (i in 0..ui_updater.active.files.size) {
-        UiUpdateFile* file = &ui_updater.active.files.data[i];
+    for (i in 0.._ui_updater.active.files.size) {
+        UiUpdateFile* file = &_ui_updater.active.files.data[i];
         if (file.local.len > 0 && String_eq_cstr(&file.path, name) == 1) { return file.local.data; }
     }
 #endif
@@ -254,24 +254,24 @@ string ui_update_source(string name) {
 // The bundle in use: `text` (a manifest checked before) when its files are all here, else none
 // (internal).
 void _ui_update_use(string text) {
-    _ui_update_free(&ui_updater.active);
-    String_clear(&ui_updater.active_text);
+    _ui_update_free(&_ui_updater.active);
+    String_clear(&_ui_updater.active_text);
     if (text == null || text[0] == 0) { return; }
     // Checked when it was downloaded; checked again here, in case the store was changed.
-    if (ui_update_parse(text, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &ui_updater.active) != null
-        || !_ui_update_locate(&ui_updater.active)) {
-        _ui_update_free(&ui_updater.active);
+    if (ui_update_parse(text, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &_ui_updater.active) != null
+        || !_ui_update_locate(&_ui_updater.active)) {
+        _ui_update_free(&_ui_updater.active);
         ui_storage_remove("ui.update.active");
         return;
     }
-    String_from(&ui_updater.active_text, text);
+    String_from(&_ui_updater.active_text, text);
 }
 
 // At start, before the app mounts: a bundle downloaded last time becomes the one in use, and
 // the one in use is read (internal; the bridge calls it).
 void ui_updates_start() {
-    ui_updater.changed = signal_new<int>(0);
-    ui_updater.started = true;
+    _ui_updater.changed = signal_new<int>(0);
+    _ui_updater.started = true;
     string ready = ui_storage_get("ui.update.ready");
     if (ready != null && ready[0] != 0) {
         ui_storage_set("ui.update.active", ready);
@@ -279,47 +279,47 @@ void ui_updates_start() {
     }
     string active = ui_storage_get("ui.update.active");
     _ui_update_use(active);
-    ui_updater.ready_version = 0;
-    String_clear(&ui_updater.ready_text);
+    _ui_updater.ready_version = 0;
+    String_clear(&_ui_updater.ready_text);
 }
 
 // At stop: the updater's state is freed; a download in progress stops (internal).
 void _ui_updates_stop() {
-    if (!ui_updater.started) { return; }
-    _ui_update_free(&ui_updater.active);
-    _ui_update_free(&ui_updater.incoming);
-    String_free(&ui_updater.active_text);
-    String_free(&ui_updater.ready_text);
-    String_free(&ui_updater.incoming_text);
-    String_free(&ui_updater.error);
-    String_free(&ui_updater.version);
-    String_free(&ui_updater.ready_shown);
-    ui_updater.changed.free();
-    ui_updater.changed = null;
-    ui_updater.busy = false;
-    ui_updater.started = false;
-    ui_updater.ready_version = 0;
+    if (!_ui_updater.started) { return; }
+    _ui_update_free(&_ui_updater.active);
+    _ui_update_free(&_ui_updater.incoming);
+    String_free(&_ui_updater.active_text);
+    String_free(&_ui_updater.ready_text);
+    String_free(&_ui_updater.incoming_text);
+    String_free(&_ui_updater.error);
+    String_free(&_ui_updater.version);
+    String_free(&_ui_updater.ready_shown);
+    _ui_updater.changed.free();
+    _ui_updater.changed = null;
+    _ui_updater.busy = false;
+    _ui_updater.started = false;
+    _ui_updater.ready_version = 0;
 }
 
 // The download stopped: `error` is why (null when it finished) (internal).
 void _ui_update_finish(string error) {
-    ui_updater.busy = false;
-    String_clear(&ui_updater.error);
+    _ui_updater.busy = false;
+    String_clear(&_ui_updater.error);
     if (error != null) {
-        String_append(&ui_updater.error, error);
+        String_append(&_ui_updater.error, error);
         _ui_update_report(error);
-        _ui_update_free(&ui_updater.incoming);
-        String_clear(&ui_updater.incoming_text);
-        ui_updater.changed.set(ui_updater.changed.value + 1);
+        _ui_update_free(&_ui_updater.incoming);
+        String_clear(&_ui_updater.incoming_text);
+        _ui_updater.changed.set(_ui_updater.changed.value + 1);
         return;
     }
-    ui_storage_set("ui.update.ready", ui_updater.incoming_text.data);
-    String_clear(&ui_updater.ready_text);
-    String_append(&ui_updater.ready_text, ui_updater.incoming_text.data);
-    ui_updater.ready_version = ui_updater.incoming.version;
-    _ui_update_free(&ui_updater.incoming);
-    String_clear(&ui_updater.incoming_text);
-    ui_updater.changed.set(ui_updater.changed.value + 1);
+    ui_storage_set("ui.update.ready", _ui_updater.incoming_text.data);
+    String_clear(&_ui_updater.ready_text);
+    String_append(&_ui_updater.ready_text, _ui_updater.incoming_text.data);
+    _ui_updater.ready_version = _ui_updater.incoming.version;
+    _ui_update_free(&_ui_updater.incoming);
+    String_clear(&_ui_updater.incoming_text);
+    _ui_updater.changed.set(_ui_updater.changed.value + 1);
 }
 
 // Says why an update was not installed on standard error (the app's logs) (internal).
@@ -333,9 +333,9 @@ void _ui_update_report(string error) {
 // The next file of the incoming bundle that this device does not have: downloaded and checked,
 // then the one after it; the bundle is ready after the last (internal).
 void _ui_update_next() {
-    while (ui_updater.next < ui_updater.incoming.files.size) {
-        UiUpdateFile* file = &ui_updater.incoming.files.data[ui_updater.next];
-        if (file.local.len == 0) { ui_updater.next++; continue; }
+    while (_ui_updater.next < _ui_updater.incoming.files.size) {
+        UiUpdateFile* file = &_ui_updater.incoming.files.data[_ui_updater.next];
+        if (file.local.len == 0) { _ui_updater.next++; continue; }
         String url;
         String_appendf(&url, "%sfiles/%s", UI_UPDATE_URL, file.hash.data);
 #ifdef __wasm__
@@ -343,7 +343,7 @@ void _ui_update_next() {
         int request = ++ui.next_request;
         ui.text_requests.push(_PendingText{request, void(string answer) {
             if (answer != null && answer[0] != 0) { _ui_update_finish(answer); return; }
-            ui_updater.next++;
+            _ui_updater.next++;
             _ui_update_next();
         }});
         List<string> strings;
@@ -353,12 +353,12 @@ void _ui_update_next() {
         String_free(&url);
         return;
 #else
-        if (fs_exists(file.local.data) == 1) { String_free(&url); ui_updater.next++; continue; }
+        if (fs_exists(file.local.data) == 1) { String_free(&url); _ui_updater.next++; continue; }
         String part;
         String_appendf(&part, "%s.part", file.local.data);
         ui_fetch(FetchRequest{url: url.data, save_to: part.data}, void(FetchResult result) {
-            if (!ui_updater.busy) { return; }
-            UiUpdateFile* got = &ui_updater.incoming.files.data[ui_updater.next];
+            if (!_ui_updater.busy) { return; }
+            UiUpdateFile* got = &_ui_updater.incoming.files.data[_ui_updater.next];
             String partial;
             String_appendf(&partial, "%s.part", got.local.data);
             String hash;
@@ -373,7 +373,7 @@ void _ui_update_next() {
             String_free(&partial);
             String_free(&hash);
             if (error != null) { _ui_update_finish(error); return; }
-            ui_updater.next++;
+            _ui_updater.next++;
             _ui_update_next();
         });
         String_free(&part);
@@ -386,16 +386,16 @@ void _ui_update_next() {
     // webview host's): the changed files by hash. The bundle is ready once it answers.
     int request = ++ui.next_request;
     ui.text_requests.push(_PendingText{request, void(string answer) {
-        if (!ui_updater.busy) { return; }
+        if (!_ui_updater.busy) { return; }
         _ui_update_finish(answer != null && answer[0] != 0 ? answer : null);
     }});
     List<string> strings;
     String version;
-    String_appendf(&version, "%lld", ui_updater.incoming.version);
+    String_appendf(&version, "%lld", _ui_updater.incoming.version);
     strings.push("ready");
     strings.push(version.data);
-    for (i in 0..ui_updater.incoming.files.size) {
-        UiUpdateFile* file = &ui_updater.incoming.files.data[i];
+    for (i in 0.._ui_updater.incoming.files.size) {
+        UiUpdateFile* file = &_ui_updater.incoming.files.data[i];
         if (file.local.len == 0) { continue; }
         String line;
         String_appendf(&line, "%s %s", file.path.data, file.hash.data);
@@ -421,13 +421,13 @@ void _ui_update_prune() {
     List<String> names;
     fs_list_dir(dir.data, &names);
     UiUpdateBundle ready;
-    if (ui_updater.ready_text.len > 0) {
-        ui_update_parse(ui_updater.ready_text.data, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &ready);
+    if (_ui_updater.ready_text.len > 0) {
+        ui_update_parse(_ui_updater.ready_text.data, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &ready);
     }
     for (i in 0..names.size) {
         bool used = false;
         for (k in 0..2) {
-            UiUpdateBundle* bundle = k == 0 ? &ui_updater.active : &ready;
+            UiUpdateBundle* bundle = k == 0 ? &_ui_updater.active : &ready;
             for (j in 0..bundle.files.size) {
                 if (String_starts_with(&names.data[i], bundle.files.data[j].hash.data) == 1
                     && String_ends_with(&names.data[i], ".part") != 1) { used = true; }
@@ -450,29 +450,29 @@ void _ui_update_prune() {
 // Asks [updates] url for a newer bundle now (the app does once after its first frame; call it
 // again when the app comes to the foreground, say). Nothing while a check runs.
 void ui_update_check() {
-    if (!ui_updater.started || ui_updater.busy) { return; }
-    ui_updater.busy = true;
+    if (!_ui_updater.started || _ui_updater.busy) { return; }
+    _ui_updater.busy = true;
     String url;
     String_appendf(&url, "%smanifest.txt", UI_UPDATE_URL);
     ui_fetch(FetchRequest{url: url.data}, void(FetchResult result) {
-        if (!ui_updater.busy) { return; }
+        if (!_ui_updater.busy) { return; }
         if (result.status != 200) {
             // Nothing published yet, or no network: no error, the next start asks again.
-            ui_updater.busy = false;
+            _ui_updater.busy = false;
             return;
         }
-        string error = ui_update_parse(result.body, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &ui_updater.incoming);
+        string error = ui_update_parse(result.body, UI_UPDATE_KEY, ui_app_id(), ui_app_version(), &_ui_updater.incoming);
         if (error != null) { _ui_update_finish(error); return; }
-        int64 newest = ui_updater.active.version > ui_updater.ready_version ? ui_updater.active.version : ui_updater.ready_version;
-        if (ui_updater.incoming.version <= newest) {
-            _ui_update_free(&ui_updater.incoming);
-            ui_updater.busy = false;
+        int64 newest = _ui_updater.active.version > _ui_updater.ready_version ? _ui_updater.active.version : _ui_updater.ready_version;
+        if (_ui_updater.incoming.version <= newest) {
+            _ui_update_free(&_ui_updater.incoming);
+            _ui_updater.busy = false;
             return;
         }
-        String_clear(&ui_updater.incoming_text);
-        String_append(&ui_updater.incoming_text, result.body);
-        _ui_update_locate(&ui_updater.incoming);
-        ui_updater.next = 0;
+        String_clear(&_ui_updater.incoming_text);
+        String_append(&_ui_updater.incoming_text, result.body);
+        _ui_update_locate(&_ui_updater.incoming);
+        _ui_updater.next = 0;
         _ui_update_next();
     });
     String_free(&url);
@@ -485,20 +485,20 @@ void ui_update_check() {
 // files from the next frame (on the web, what the page loads from now on; images it shows
 // already keep theirs until it loads again). Nothing when no bundle is waiting.
 void ui_update_apply() {
-    if (ui_updater.ready_version <= 0) { return; }
-    ui_storage_set("ui.update.active", ui_updater.ready_text.data);
+    if (_ui_updater.ready_version <= 0) { return; }
+    ui_storage_set("ui.update.active", _ui_updater.ready_text.data);
     ui_storage_remove("ui.update.ready");
     String text;
-    String_from(&text, ui_updater.ready_text.data);
+    String_from(&text, _ui_updater.ready_text.data);
     _ui_update_use(text.data);
     String_free(&text);
-    ui_updater.ready_version = 0;
-    String_clear(&ui_updater.ready_text);
+    _ui_updater.ready_version = 0;
+    String_clear(&_ui_updater.ready_text);
 #ifdef __wasm__
     List<string> strings;
     strings.push("apply");
     ui_command(0, 12, &strings);
     strings.free();
 #endif
-    ui_updater.changed.set(ui_updater.changed.value + 1);
+    _ui_updater.changed.set(_ui_updater.changed.value + 1);
 }

@@ -1,12 +1,13 @@
 // The runtime's globals, first because Eskiu declares a global where it is defined (as C).
 // Part of <ui> (src/ui.esk imports every part; they are not imported alone).
 
-// The runtime the hosts and the element calls use (one UI thread).
+// The runtime the hosts and the element calls use (one UI thread). Internal, like its type
+// `Ui`: outside the stability promise (docs/stability.md).
 *Ui ui;
 
 // Unique per observer run across all observers, so a freed observer's subscription mark
 // never matches a new one at the same address.
-int64 ui_epochs;
+int64 _ui_epochs;
 
 // Up to kSmall children are matched by scanning; more get the key tables.
 const int kSmall = 8;
@@ -26,7 +27,7 @@ const int kUnset = -1000000;
 int ui_edge_policy;
 
 // The app's data directory (ui_data_dir), set by the host before the app starts.
-string ui_data_path;
+string _ui_data_path;
 
 // Where an element was called from: the file, line and column of the call, in a dev or test
 // build whose compiler has the call-site builtins (the ui tool defines UI_SRCLOC then;

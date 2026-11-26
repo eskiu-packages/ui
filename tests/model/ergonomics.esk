@@ -36,7 +36,7 @@ void ergonomics() {
     *Node bar = find_label(ui.root, "bar");
     check(bar != null && bar.children.size == 2 && bar.children.data[0].children.size == 0,
         "Box and Spacer are boxes with no children");
-    check(ui_frame_strings.size == 0, "frame_string's String is freed with the frame");
+    check(_ui_frame_strings.size == 0, "frame_string's String is freed with the frame");
     for (i in 1..20) { erg_renders.set(i); ui_frame(); }
     press_label("plus");
     check(erg_changes == 20, "ui_own_fn keeps the latest closure working");

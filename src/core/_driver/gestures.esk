@@ -50,8 +50,8 @@ string _ui_driver_gesture(string op, string target, int dx, int dy, int ms, bool
     }
     _ui_driver_flush();
     _ui_driver_begin(op);
-    String_append(&ui_drv.out, ", \"target\": ");
-    ui_json_string(&ui_drv.out, target);
-    String_append(&ui_drv.out, "}");
-    return ui_drv.out.data;
+    String_append(&_ui_drv.out, ", \"target\": ");
+    ui_json_string(&_ui_drv.out, target);
+    String_append(&_ui_drv.out, "}");
+    return _ui_drv.out.data;
 }

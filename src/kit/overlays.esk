@@ -167,33 +167,33 @@ void Tooltip(string text, escaping fn()->void content UI_LOC) {
 // KIT_TOASTS_WAITING wait: a newer one drops the oldest waiting. With no host mounted, a toast
 // is dropped.
 #define KIT_TOASTS_WAITING 5
-*Signal<int> kit_toast_count;
-List<String> kit_toast_queue;
+*Signal<int> _kit_toast_count;
+List<String> _kit_toast_queue;
 
 // Shows `text` at the bottom for a few seconds, after the toasts before it, through the
 // mounted ToastHost; dropped when none is mounted.
 void kit_toast(string text) {
-    if (kit_toast_count == null) { return; }
+    if (_kit_toast_count == null) { return; }
     string message = text == null ? "" : text;
-    if (kit_toast_queue.size > 0) {
-        string last = kit_toast_queue.data[kit_toast_queue.size - 1].data;
+    if (_kit_toast_queue.size > 0) {
+        string last = _kit_toast_queue.data[_kit_toast_queue.size - 1].data;
         if (strcmp(last == null ? "" : last, message) == 0) { return; }
     }
     // The first is the one showing; the rest wait.
-    if (kit_toast_queue.size > KIT_TOASTS_WAITING) {
-        String_free(&kit_toast_queue.data[1]);
-        List_remove(&kit_toast_queue, 1);
+    if (_kit_toast_queue.size > KIT_TOASTS_WAITING) {
+        String_free(&_kit_toast_queue.data[1]);
+        List_remove(&_kit_toast_queue, 1);
     }
     String copy;
     String_append(&copy, message);
-    List_push(&kit_toast_queue, copy);
-    kit_toast_count.set(kit_toast_count.value + 1);
+    List_push(&_kit_toast_queue, copy);
+    _kit_toast_count.set(_kit_toast_count.value + 1);
 }
 
 // Drops the toasts waiting (internal).
 void _kit_toast_clear() {
-    for (i in 0..kit_toast_queue.size) { String_free(&kit_toast_queue.data[i]); }
-    kit_toast_queue.free();
+    for (i in 0.._kit_toast_queue.size) { String_free(&_kit_toast_queue.data[i]); }
+    _kit_toast_queue.free();
 }
 
 // The mounted host takes the toasts while it is mounted.
@@ -202,9 +202,9 @@ void kit_toast_owner(*Signal<int> count) {
     *Slot slot = ui_slot(8, &tag);
     if (slot.data != null) { return; }
     slot.data = count;
-    kit_toast_count = count;
+    _kit_toast_count = count;
     slot.dispose = void() {
-        if (kit_toast_count == count) { kit_toast_count = null; _kit_toast_clear(); }
+        if (_kit_toast_count == count) { _kit_toast_count = null; _kit_toast_clear(); }
     };
 }
 
@@ -222,21 +222,21 @@ void ToastHost(UI_LOC_ONLY) {
         *Signal<bool> visible = use_signal<bool>(false);
         *Signal<bool> present = use_signal<bool>(false);
         // The next toast in the queue, once the one before it is gone.
-        if (!present.get() && kit_toast_queue.size > 0) {
+        if (!present.get() && _kit_toast_queue.size > 0) {
             visible.set(true);
             present.set(true);
-            ui_announce(kit_toast_queue.data[0].data);
+            ui_announce(_kit_toast_queue.data[0].data);
         }
         use_timeout(visible.get() ? 2500 : 0) { visible.set(false); }
         use_timeout(!visible.get() && present.get() ? 300 : 0) {
-            if (kit_toast_queue.size > 0) {
-                String_free(&kit_toast_queue.data[0]);
-                List_remove(&kit_toast_queue, 0);
+            if (_kit_toast_queue.size > 0) {
+                String_free(&_kit_toast_queue.data[0]);
+                List_remove(&_kit_toast_queue, 0);
             }
             present.set(false);
         }
-        if (!present.get() || kit_toast_queue.size == 0) { return; }
-        string message = kit_toast_queue.data[0].data;
+        if (!present.get() || _kit_toast_queue.size == 0) { return; }
+        string message = _kit_toast_queue.data[0].data;
         Row(Style{absolute: true, left: 24, right: 24, bottom: 24 + ui_insets().bottom, justify: JustifyCenter,
                   opacity: visible.get() ? 100 : 0, translate_y: visible.get() ? 0 : 16, transition_ms: 250,
                   easing: EaseOut}) {

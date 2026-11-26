@@ -151,7 +151,7 @@ void navigation() {
     check(nav_text_shown("Note errands"), "the replaced route's parameter");
     nav_router.reset("/");
     ui_frame();
-    check(ui_route_params.size == 0, "the parameters go with their routes");
+    check(_ui_route_params.size == 0, "the parameters go with their routes");
     nav_tick.free();
     String_free(&screens);
     ui_shutdown();

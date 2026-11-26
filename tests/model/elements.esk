@@ -96,14 +96,14 @@ void textf_texts() {
     ui_frame();
     *Node t = first_text(ui.root);
     check(t != null && strcmp(t.text, "Count: 0 of ten") == 0, "textf's text is the element's");
-    check(ui_frame_texts.size == 0, "the frame's texts are freed after it");
+    check(_ui_frame_texts.size == 0, "the frame's texts are freed after it");
     textf_count.set(5); ui_frame();
     t = first_text(ui.root);
     check(t != null && strcmp(t.text, "Count: 5 of ten") == 0, "textf again in the next frame");
     string outside = textf("%d", 42);
-    check(strcmp(outside, "42") == 0 && ui_frame_texts.size == 1, "textf outside a render waits for a frame");
+    check(strcmp(outside, "42") == 0 && _ui_frame_texts.size == 1, "textf outside a render waits for a frame");
     ui_frame();
-    check(ui_frame_texts.size == 0, "a frame with nothing to render frees it too");
+    check(_ui_frame_texts.size == 0, "a frame with nothing to render frees it too");
     ui_shutdown(); balanced("textf leak");
 }
 

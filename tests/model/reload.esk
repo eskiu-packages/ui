@@ -91,8 +91,8 @@ void reload_keeps_state() {
     check(rl_moved.value == 9, "a keyed signal kept where it moved");
     check(rl_late.value == 5, "a new scope starts fresh");
     int unused = 0;
-    for (i in 0..ui_rl.signals.size) {
-        *_UiSavedSignal entry = &ui_rl.signals.data[i];
+    for (i in 0.._ui_rl.signals.size) {
+        *_UiSavedSignal entry = &_ui_rl.signals.data[i];
         if (!entry.used) {
             unused++;
             check(String_eq_cstr(&entry.path, "Column[0] > Gone[1]") == 1, "only the removed scope's state is left");
@@ -106,7 +106,7 @@ void reload_keeps_state() {
     ui_frame();
     ui_reload_load(saved.data);
     ui_event(0, 0);
-    check(!ui_rl.active, "an input ends the restore");
+    check(!_ui_rl.active, "an input ends the restore");
     ui_shutdown();
     Router_free(rl_router);
     String_free(&saved);
@@ -116,7 +116,7 @@ void reload_keeps_state() {
     Ui third;
     ui_init(&third, record);
     ui_reload_load("something else");
-    check(!ui_rl.active, "not a snapshot");
+    check(!_ui_rl.active, "not a snapshot");
     ui_mount() { rl_input = use_signal<int>(1); }
     ui_frame();
     check(rl_input.value == 1, "the initial value");
