@@ -246,7 +246,7 @@ void agent_stop(Project* p) {
 }
 
 void agent_usage() {
-    println_err("usage: ui agent web|macos|linux|windows|ios|android [--json] [--real-clock] OP...\n"
+    println_err("usage: ui agent web|macos|linux|windows|ios|android [--json] [--real-clock] [--locale TAG] OP...\n"
                 "       ui agent web|macos|linux|windows|ios|android --stop\n"
                 "ops: tree, layout, state, logs, perf, back, \"tap ID\", \"type ID TEXT\", \"scroll ID DY\",\n"
                 "     \"screenshot FILE\", \"clock +MS\", \"clock settle\", \"clock real\" (docs/agents.md)");
@@ -269,6 +269,7 @@ void agent_command(Project* p, int argc, string* argv) {
     for (int i = 3; i < argc; i++) {
         if (strcmp(argv[i], "--real-clock") == 0) { real_clock = true; }
         else if (strcmp(argv[i], "--stop") == 0) { stop = true; }
+        else if (strcmp(argv[i], "--locale") == 0 && i + 1 < argc) { agent_locale = argv[++i]; }
         else { args.push(argv[i]); }
     }
     if (stop) { agent_stop(p); return; }

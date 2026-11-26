@@ -204,7 +204,7 @@ void uitest_json_result(string name, string file, bool ok, int steps, int line, 
 }
 
 void uitest_usage() {
-    println_err("usage: ui test [web|macos|linux|windows|ios|android ...] [--update] [--verbose] [--perf FILE] [--keep] [--json] [FILE|DIR ...]\n"
+    println_err("usage: ui test [web|macos|linux|windows|ios|android ...] [--update] [--verbose] [--perf FILE] [--keep] [--locale TAG] [--json] [FILE|DIR ...]\n"
                 "  runs tests/ui/*.uitest (or the files given) on each host given, else on every host available here");
     exit(2);
 }
@@ -224,6 +224,7 @@ void uitest_command(Project* p, int argc, string* argv) {
         else if (strcmp(a, "--verbose") == 0) { uitest_verbose = true; }
         else if (strcmp(a, "--keep") == 0) { keep = true; }
         else if (strcmp(a, "--perf") == 0 && i + 1 < argc) { perf_path = argv[++i]; }
+        else if (strcmp(a, "--locale") == 0 && i + 1 < argc) { agent_locale = argv[++i]; }
         else if (a[0] == '-') { uitest_usage(); }
         else { args.push(a); }
     }
