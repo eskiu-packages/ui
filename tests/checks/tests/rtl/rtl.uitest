@@ -1,0 +1,6 @@
+# Right to left on the web (UI-016), run with a forced language (MCP-13):
+#   ui test web --locale ar tests/rtl/rtl.uitest
+# A row of two 50-point texts, 200 wide, starts from the right.
+tap rtl
+expect first frame 150 0 50 _ in pair
+expect second frame 100 0 50 _ in pair

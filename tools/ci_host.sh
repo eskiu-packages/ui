@@ -45,6 +45,12 @@ case "$HOST" in macos|linux|windows)
     fi;;
 esac
 if [ "$HOST" = web ]; then
+    # Behaviors the audits found (tests/checks): the theme from a handler, touch targets, a
+    # plain field in the dark theme, routes, covered screens, a broken image, clipped rows, and
+    # right to left with a forced language.
+    started=$(date +%s)
+    (cd tests/checks && ../../build/ui test web && ../../build/ui test web --locale ar tests/rtl)
+    echo "checks: $(( $(date +%s) - started )) s"
     python3 tools/budgets.py model
     # The prerendered first frame: content before the module, the elements adopted.
     python3 tests/web/prerender.py --measure 3

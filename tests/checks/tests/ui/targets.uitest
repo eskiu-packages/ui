@@ -1,0 +1,11 @@
+# Touch targets: each tab at least 44 points wide and tall (UI-082), a Slider 44 tall with
+# its track's size kept (UI-105).
+tap targets
+expect Go frame _ _ 44 44
+expect Up frame _ _ 44 44
+expect slider frame _ _ _ 44
+# A Select named with ui_style_next is heard with its name and its option (UI-092).
+expect "Sort, Newest" exists
+tap "Sort, Newest"
+tap Oldest
+expect "Sort, Oldest" exists

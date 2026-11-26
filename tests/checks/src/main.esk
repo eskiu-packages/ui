@@ -1,0 +1,93 @@
+// Behaviors the hosts must keep, a scene each, checked by tests/ui/*.uitest: the theme
+// changed from a handler, touch targets, a plain field in the dark theme, a router whose root
+// has no '/', screens under the top one, a broken image, rows a scroll clips, right to left.
+import <string>;
+import <ui>;
+import <ui/kit>;
+
+*Router routes;
+
+// A Navigator whose root is "home" (no '/'), each screen with a "title".
+void RoutesScene() {
+    if (routes == null) { routes = router_new("home"); }
+    Navigator(routes, void(string route) {
+        Column(Style{gap: 8}) {
+            bool home = route_match("/home", route, null);
+            TextWith(Style{test_id: "title"}, home ? "Home" : "Details");
+            if (home) { Button("Open") { routes.push("/details"); } }
+        }
+    });
+}
+
+// The scene's own hooks live in a scope keyed by the scene, so switching scenes starts afresh.
+void Scenes(int scene) {
+    Scope("Scene", key(scene)) { Scene(scene); }
+}
+
+void Scene(int scene) {
+    if (scene == 1) {
+        Body("Plain text");
+        KitButton("Dark", VariantPrimary) { kit_set(kit_dark()); }
+        KitButton("Light", VariantSecondary) { kit_set(kit_light()); }
+    }
+    if (scene == 2) {
+        *Signal<int> tab = use_signal<int>(0);
+        *Signal<int> level = use_signal<int>(5);
+        TabBar("Go\nUp", tab.get(), void(int i) { tab.set(i); });
+        Slider(Style{test_id: "slider"}, level.get(), 0, 10, void(int v) { level.set(v); });
+        *Signal<int> sort = use_signal<int>(0);
+        ui_style_next(Style{label: "Sort"});
+        Select("Newest\nOldest", sort.get(), void(int i) { sort.set(i); });
+    }
+    if (scene == 3) {
+        *StringState text = use_string("Typed");
+        TextInput_bind(Input{style: Style{test_id: "field"}}, text);
+        KitButton("Dark", VariantPrimary) { kit_set(kit_dark()); }
+    }
+    if (scene == 4) { RoutesScene(); }
+    if (scene == 5) {
+        *Signal<int> failed = use_signal<int>(0);
+        ui_on_image(void(bool loaded) { if (!loaded) { failed.set(failed.get() + 1); } });
+        Image(Style{test_id: "broken", width: 80, height: 80, background: 0xDDE3EAFF}, "missing.png");
+        TextWith(Style{test_id: "failed"}, textf("failed %d", failed.get()));
+    }
+    if (scene == 6) {
+        Scroll(Style{test_id: "scroller", height: 100, gap: 0}) {
+            for (i in 0..12) { TextWith(Style{height: 40}, textf("Row %d", i)); }
+        }
+    }
+    if (scene == 7) {
+        Row(Style{test_id: "pair", width: 200, gap: 0}) {
+            TextWith(Style{width: 50, test_id: "first"}, "First");
+            TextWith(Style{width: 50, test_id: "second"}, "Second");
+        }
+    }
+}
+
+void App() {
+    Column(Style{background: kit.page, grow: 1, padding: 16, test_id: "page"}) {
+        *Signal<int> scene = use_signal<int>(0);
+        // Computed in App, which reads no signal of the theme: kit_set must still reach it.
+        Row(Style{background: kit.surface, padding: 8, test_id: "bar"}) { TextWith(Style{color: kit.ink}, "Checks"); }
+        Row(Style{wrap: true, gap: 4}) {
+            ButtonWith(Style{test_id: "theme"}, "Theme") { scene.set(1); }
+            ButtonWith(Style{test_id: "targets"}, "Targets") { scene.set(2); }
+            ButtonWith(Style{test_id: "fields"}, "Fields") { scene.set(3); }
+            ButtonWith(Style{test_id: "routes"}, "Routes") { scene.set(4); }
+            ButtonWith(Style{test_id: "images"}, "Images") { scene.set(5); }
+            ButtonWith(Style{test_id: "scroll"}, "Scroll") { scene.set(6); }
+            ButtonWith(Style{test_id: "rtl"}, "RTL") { scene.set(7); }
+        }
+        Scenes(scene.get());
+    }
+}
+
+void ui_app_start(int which) {
+    // The light theme whatever the system's, with its ink for plain text.
+    kit_set(kit_light());
+    ui_mount() { App(); }
+}
+
+void ui_app_stop() {
+    if (routes != null) { routes.free(); routes = null; }
+}

@@ -1,0 +1,6 @@
+# An image that cannot be loaded tells the app once (ui_on_image), and on the web shows only
+# its background, with no broken-image icon (UI-033; hosts/web/access.mjs's watchImage).
+tap images
+clock real
+expect failed text "failed 1"
+expect broken frame _ _ 80 80

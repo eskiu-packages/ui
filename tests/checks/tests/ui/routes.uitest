@@ -1,0 +1,12 @@
+# A router whose root has no '/' (router_new("home")) opened at the page's "/": the stack is
+# its root alone (UI-102). After a push, `title` names the top screen's, not the covered
+# screen's too (UI-056).
+tap routes
+expect state routes "/home"
+expect title text Home
+tap Open
+expect state routes "/home > /details"
+expect title text Details
+expect title frame _ _ _ _
+back
+expect title text Home

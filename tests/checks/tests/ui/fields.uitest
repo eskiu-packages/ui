@@ -1,0 +1,6 @@
+# A plain TextInput under the dark theme takes the theme's surface with its ink, not the
+# browser's white field (UI-101).
+tap fields
+tap Dark
+expect field prop color "#f3f4f6ff"
+expect field prop background "#161b26ff"

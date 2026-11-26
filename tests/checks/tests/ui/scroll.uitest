@@ -1,0 +1,9 @@
+# A row inside the window but cut off by its scroll is not visible (UI-057): the scroll is
+# 100 points tall, its rows 40.
+tap scroll
+expect "Row 0" visible
+expect "Row 2" visible
+expect "Row 5" hidden
+scroll scroller 200
+expect "Row 0" hidden
+expect "Row 5" visible

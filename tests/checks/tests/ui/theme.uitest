@@ -1,0 +1,8 @@
+# kit_set from a handler reaches the style App computed from `kit` (UI-100).
+tap theme
+expect page prop background "#f5f6faff"
+tap Dark
+expect page prop background "#0b0f19ff"
+expect bar prop background "#161b26ff"
+tap Light
+expect page prop background "#f5f6faff"
