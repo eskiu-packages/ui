@@ -183,6 +183,7 @@ void PlanPage(*Router router, int id) {
                     leaving.set(d.year * 10000 + d.month * 100 + d.day);
                 });
                 TextWith(Style{font_size: 15, font_weight: 600, color: kMuted}, "Travelers");
+                ui_style_next(Style{label: "Travelers"});
                 Select("Just me\nTwo people\nA family of four", travelers.get(), void(int i) { travelers.set(i); });
                 TextWith(Style{font_size: 15, font_weight: 600, color: kMuted}, "Budget");
                 SegmentedControl("Saver\nComfort\nLuxury", budget.get(), void(int i) { budget.set(i); });

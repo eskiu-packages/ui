@@ -171,7 +171,7 @@ smaller (see density below).
 | `Collapsible(title, content)` | A header that shows or hides its content; its plus turns into a cross. |
 | `Popover(open, on_dismiss, trigger, content)` | `content` in a panel next to `trigger` while `open`: below it, or above when there is no room, at least as wide as the trigger and kept in the window. |
 | `DropdownMenu(label, options, fn(int)->void)` | A button that opens a menu of options (a line each). |
-| `Select(options, selected, fn(int)->void)` | A field showing the chosen option, with a menu to change it. |
+| `Select(options, selected, fn(int)->void)` | A field showing the chosen option, with a menu to change it. A screen reader hears its name and the option ("Sort, Newest first") when a `label` comes before it with `ui_style_next(Style{label: "Sort"})`. |
 | `MenuItem(text, checked, on_press)` | A row of a menu, lit under a pointer. |
 | `Tooltip(text, content)` | `text` in a bubble above `content` while a pointer is over it, or for a few seconds after a long press on a touch screen. |
 | `kit_toast(text)`, `ToastHost()` | A short message at the bottom for a few seconds, announced to a screen reader; one shown while another is up waits its turn. The app puts `ToastHost()` last in its root. |

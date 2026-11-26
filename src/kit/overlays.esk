@@ -90,18 +90,31 @@ void DropdownMenu(string label, string options, escaping fn(int)->void on_select
     }
 }
 
-// One of `options` (a line each), chosen from a menu under a field that shows it.
+// One of `options` (a line each), chosen from a menu under a field that shows it. A screen
+// reader hears the field's name and the chosen option ("Sort, Newest first"): the name is a
+// `label` given with ui_style_next just before (`ui_style_next(Style{label: "Sort"});`), which
+// goes to the field rather than its wrapper; without one it hears the option alone.
 void Select(string options, int selected, escaping fn(int)->void on_change UI_LOC) {
     KIT_HERE
     ui_own_fn(on_change);
+    // The field's name from ui_style_next, kept for the field (its other fields still go to the
+    // first element made).
+    string name = null;
+    if (ui.has_next_style && ui.next_style.label != null) {
+        name = ui_copy(ui.next_style.label);
+        ui.next_style.label = null;
+        ui_own(void() { free(name); });
+    }
     Scope("Select", Key{}) {
         *Signal<bool> open = use_signal<bool>(false);
         List<String> items;
         kit_options(options, &items);
         string current = selected >= 0 && selected < items.size ? items.data[selected].data : "";
         Popover(open.get(), void() { open.set(false); }, void() {
-            Pressable(Style{padding: 12, radius: kit.radius, background: kit.surface, border_width: 1, border_color: kit.line,
-                            label: current, role: RoleButton, expanded: open.get() ? DisclosureExpanded : DisclosureCollapsed},
+            string spoken = name == null ? current : textf("%s, %s", name, current);
+            // `control`, not `line`: the field's border is what shows it takes input (3:1).
+            Pressable(Style{padding: 12, radius: kit.radius, background: kit.surface, border_width: 1, border_color: kit.control,
+                            label: spoken, role: RoleButton, expanded: open.get() ? DisclosureExpanded : DisclosureCollapsed},
                 void() { open.set(true); }) {
                 Row(Style{align: AlignCenter, gap: 8}) {
                     TextWith(Style{grow: 1, font_size: 16, color: kit.ink}, current);
@@ -109,7 +122,7 @@ void Select(string options, int selected, escaping fn(int)->void on_change UI_LO
                 }
             }
         }) {
-            Column(Style{gap: 2, role: RoleMenu}) {
+            Column(Style{gap: 2, role: RoleMenu, label: name}) {
                 List<String> names;
                 kit_options(options, &names);
                 for (i in 0..names.size) {

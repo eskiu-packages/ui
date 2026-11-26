@@ -142,7 +142,8 @@ void ColorPicker(int64 color, escaping fn(int64)->void on_change UI_LOC) {
             String current;
             defer String_free(&current);
             for (i in 0..12) { if (kit_swatch(i) == color) { kit_text_item(kit_text.colors, i, &current); } }
-            Pressable(Style{width: 44, height: 44, radius: 22, background: color, border_width: 2, border_color: kit.line,
+            // `control`, not `line`: a white swatch on a white surface still shows its edge (3:1).
+            Pressable(Style{width: 44, height: 44, radius: 22, background: color, border_width: 2, border_color: kit.control,
                             label: kit_text.color, value: current.data, role: RoleButton,
                             expanded: open.get() ? DisclosureExpanded : DisclosureCollapsed}, void() { open.set(true); }) {}
         }) {

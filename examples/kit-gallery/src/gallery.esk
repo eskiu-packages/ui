@@ -74,6 +74,7 @@ void KitGallery() {
                 *Signal<int> sort = use_signal<int>(0);
                 *Signal<int> day = use_signal<int>(21);
                 *Signal<int64> color = use_signal<int64>(0x6366F1FF);
+                ui_style_next(Style{label: "Sort"});
                 Select("Newest first\nOldest first\nBy name", sort.get(), void(int i) { sort.set(i); });
                 Row(Style{gap: 12, align: AlignCenter}) {
                     Column(Style{grow: 1, gap: 0}) {
