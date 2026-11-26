@@ -63,7 +63,9 @@ enum ColorScheme { SchemeLight, SchemeDark }
 int ui_color_scheme() { ui.environment.get(); return ui.color_scheme; }
 
 // Accessibility: a screen reader running (VoiceOver, TalkBack), reduced motion asked for,
-// and the text size the user chose, in percent (100: the default).
+// and the text size the user chose, in percent (100: the default). On the web
+// ui_screen_reader is always false: a page cannot tell whether a screen reader runs (a
+// platform limitation; docs/platform.md).
 bool ui_screen_reader() { ui.environment.get(); return ui.screen_reader; }
 
 // Whether the user asked for reduced motion.

@@ -3,7 +3,9 @@
 
 // The theme: change its fields before mounting (colors are rgb()/rgba() values). `muted` text
 // meets WCAG AA (4.5:1) on `page` and `surface`, and `control`, the border of what takes input,
-// 3:1 on `surface`; `line` is for separators, which need not stand out.
+// 3:1 on `surface`. `line` is decorative (separators, the edges of cards and panels), which
+// WCAG 1.4.11 does not ask to stand out: no kit control has it as its only boundary, and a
+// control of your own takes `control` for its border.
 struct Theme {
     int64 primary = 0x4F46E5FF;
     int64 on_primary = 0xFFFFFFFF;
@@ -30,6 +32,8 @@ struct Theme {
     bool dense;
 }
 
+// The kit's theme, which every kit component reads: change its fields before mounting, or
+// change it later with kit_set.
 Theme kit;
 
 // The light theme (Theme's defaults) and a dark one: assign it (`kit = kit_light();`).

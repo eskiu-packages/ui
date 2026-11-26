@@ -25,6 +25,7 @@ struct KitText {
     UiWords access;
 }
 
+// The kit's words (English by default); kit_use_text sets them and the screen reader's.
 KitText kit_text;
 
 // The kit's words in English (KitText's defaults).

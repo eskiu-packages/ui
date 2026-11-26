@@ -159,6 +159,8 @@ bool ui_event_answer(int request, string text)
 
 The host's side: the text a request asked for (event 15).
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### UiWords
 
 ```eskiu
@@ -351,7 +353,9 @@ bool ui_screen_reader()
 ```
 
 Accessibility: a screen reader running (VoiceOver, TalkBack), reduced motion asked for,
-and the text size the user chose, in percent (100: the default).
+and the text size the user chose, in percent (100: the default). On the web
+ui_screen_reader is always false: a page cannot tell whether a screen reader runs (a
+platform limitation; docs/platform.md).
 
 ### ui_reduce_motion
 
@@ -394,6 +398,8 @@ void ui_set_appearance(int scheme)
 
 The host's side.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_set_accessibility
 
 ```eskiu
@@ -403,6 +409,8 @@ void ui_set_accessibility(bool screen_reader, bool reduce_motion, int font_scale
 The host's side: the screen reader, reduced motion and text size (percent) settings;
 readers render again when they change.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_set_locale
 
 ```eskiu
@@ -411,6 +419,8 @@ void ui_set_locale(string locale, bool rtl)
 
 The host's side: the user's language (a BCP 47 tag, copied) and its direction; readers
 render again when they change.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 
 ## `<ui/apis/network>`
@@ -454,6 +464,8 @@ bool ui_event_fetch(int id, int status, string body, string headers)
 ```
 
 The host's side: the request `id` finished (event 16; status 0: `body` is the error).
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_cache_path
 
@@ -515,6 +527,8 @@ void ui_set_data_dir(string path)
 ```
 
 The host's side: the app's data directory (copied).
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_asset_path
 
@@ -1672,6 +1686,8 @@ void ui_init(*Ui runtime, escaping fn(*uint8, int)->void apply)
 The host's side: starts the runtime in `runtime` with `apply`, which receives each
 commit's bytes.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_mount
 
 ```eskiu
@@ -1708,6 +1724,8 @@ void ui_complete(int sequence)
 The host's side: the commit `sequence` has been applied. Frees what waited for it, runs
 the effects, then the events that arrived meanwhile.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_frame
 
 ```eskiu
@@ -1716,6 +1734,8 @@ bool ui_frame()
 
 The host's side, once per display frame: renders what changed, parents first, and sends
 the commit to `apply`. False when there was nothing to do.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_post
 
@@ -1735,6 +1755,8 @@ bool ui_event(int id, int generation)
 
 The host's side: a press on node `id` (of `generation`). False when the node is gone.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_event_text
 
 ```eskiu
@@ -1752,6 +1774,8 @@ bool ui_event_submit(int id, int generation, string text)
 The host's side: the user pressed return in a text input (ui_on_submit); `text` is its text,
 only read during the call.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_event_image
 
 ```eskiu
@@ -1759,6 +1783,8 @@ bool ui_event_image(int id, int generation, bool loaded)
 ```
 
 The host's side: an Image with a load listener loaded (true) or could not be loaded.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_event_focus
 
@@ -1768,6 +1794,8 @@ bool ui_event_focus(int id, int generation, bool focused)
 
 The host's side: a text input gained or lost focus.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_event_toggle
 
 ```eskiu
@@ -1775,6 +1803,8 @@ bool ui_event_toggle(int id, int generation, bool on)
 ```
 
 The host's side: a Switch was turned on or off.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_event_pan
 
@@ -1859,6 +1889,15 @@ the runtime.
 The runtime's globals, first because Eskiu declares a global where it is defined (as C).
 Part of `<ui>` (src/ui.esk imports every part; they are not imported alone).
 
+### ui
+
+```eskiu
+*Ui ui;
+```
+
+The runtime the hosts and the element calls use (one UI thread). Internal, like its type
+`Ui`: outside the stability promise (docs/stability.md).
+
 ### kSmall
 
 ```eskiu
@@ -1890,6 +1929,16 @@ const int kUnset = -1000000;
 ```
 
 An edge offset (Style's left, top, right, bottom) that is not set.
+
+### ui_edge_policy
+
+```eskiu
+int ui_edge_policy;
+```
+
+Host policy: 0 puts the root inside the safe area and above the keyboard; 1 gives it the
+whole screen and leaves the insets to the app (ui_insets). An app sets it in
+ui_app_start.
 
 ### UiSourceLoc
 
@@ -2386,6 +2435,8 @@ The host's side: request(true) starts its display clock (CADisplayLink, Choreogr
 requestAnimationFrame), request(false) stops it; each frame comes back as
 ui_event_frame(time). With none set, frames come from a 16 ms timer.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_frames_update
 
 ```eskiu
@@ -2411,6 +2462,8 @@ bool ui_event_frame(double time)
 ```
 
 The host's side: the display shows a frame at `time` seconds (any fixed origin).
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### use_app_state
 
@@ -2744,6 +2797,8 @@ bool ui_event_refresh(int id, int generation)
 
 The host's side: the user pulled a scroll's RefreshControl.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 
 ## `<ui/elements/media>`
 
@@ -2801,6 +2856,8 @@ bool ui_event_native(string channel, string payload)
 
 The host's side: a native module posted `payload` on `channel` (both read during the call).
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_native_prop
 
 ```eskiu
@@ -2836,6 +2893,8 @@ bool ui_event_view(int id, int generation, string name, string payload)
 The host's side: native view `id` sent the event `name` with `payload` (read during the
 call).
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 
 ## `<ui/elements/navigation>`
 
@@ -2859,8 +2918,10 @@ render the Navigator that shows it again.
 *Router router_new(string root)
 ```
 
-A router whose stack holds `root` (null or "": "/"). The caller frees it with
-Router_free.
+A router whose stack holds `root` (null or "": "/"). A route starts with '/': one without
+("home") is kept as "/home", so the web's URL, which is the route, matches the stack (a root
+of "home" next to the page's "/" would put a second screen on top). The caller frees it
+with Router_free.
 
 ### RouteParams
 
@@ -2928,7 +2989,8 @@ command 3 with a mode ("push", "replace", "back", "reset") and its strings.
 void Router_push(*Router self, string path)
 ```
 
-Pushes `path` (copied): its screen slides in on the phone, the URL changes on the web.
+Pushes `path` (copied, with a '/' first when it has none): its screen slides in on the
+phone, the URL changes on the web.
 
 ### Router_replace
 
@@ -2970,6 +3032,8 @@ bool ui_event_route(string path, int index)
 
 The host's side, on the web: the browser went back or forward to `path`, at `index` in
 the history the router made.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_link_route
 
@@ -3171,6 +3235,8 @@ bool ui_event_alert(int request, int choice)
 
 The host's side: alert `request` was answered with button `choice` (-1: dismissed).
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### Overlay
 
 ```eskiu
@@ -3196,6 +3262,8 @@ void ui_set_insets(Insets insets)
 The host's side: report the insets (whatever the host policy, so an edge-to-edge app can
 pad itself) and whether the app is in the foreground. Readers re-run on a change.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_set_active
 
 ```eskiu
@@ -3204,6 +3272,8 @@ void ui_set_active(bool active)
 
 The host's side: the app came to the foreground (true) or left it (false); use_app_state
 handlers run.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_insets
 
@@ -3220,6 +3290,8 @@ void ui_set_window(Window window)
 ```
 
 The host's side: the window's size and scale; readers render again when they change.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### ui_window
 
@@ -3297,6 +3369,8 @@ void ui_set_link(string url)
 
 The host's side: the link the app was opened with or was sent, read through ui_link.
 
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
+
 ### ui_link
 
 ```eskiu
@@ -3361,7 +3435,7 @@ Part of `<ui>` (src/ui.esk imports every part; they are not imported alone).
 ### UiTimer
 
 ```eskiu
-struct UiTimer { int token; int ms; bool repeat; fn()->void handler; bool armed; bool removed; *Node owner; }
+struct UiTimer { int token; int ms; bool repeat; fn()->void handler; bool armed; bool removed; *Node owner; UiSourceLoc at; }
 ```
 
 A timer while its scope is mounted. The host keeps the clock (ui_set_timer_host); its
@@ -3375,6 +3449,8 @@ void ui_set_timer_host(escaping fn(int, int, bool)->void start, escaping fn(int)
 
 The host's side: start(token, ms, repeat) arms a timer, stop(token) disarms it; each tick
 comes back as ui_event_timer(token). With none set, timers never fire.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 ### use_interval
 
@@ -3400,6 +3476,8 @@ bool ui_event_timer(int token)
 ```
 
 The host's side: the timer with `token` fired.
+
+*Host ABI*: called by the hosts in this repository, which are built from the same release; not for apps, and outside the stability promise ([stability](stability.md)).
 
 
 ## `<ui/kit>`
@@ -3579,6 +3657,14 @@ Sunday, 1 Monday). `date` and `month_year` are patterns with {day}, {month} and 
 that the platform does not translate. Set them before mounting with
 `kit_use_text(kit_text_for(ui_locale()));` (or fields of your own).
 
+### kit_text
+
+```eskiu
+KitText kit_text;
+```
+
+The kit's words (English by default); kit_use_text sets them and the screen reader's.
+
 ### kit_text_english
 
 ```eskiu
@@ -3648,7 +3734,8 @@ Options side by side in a track, the selected one raised (a toggle group).
 void TabBar(string tabs, int selected, escaping fn(int)->void on_change)
 ```
 
-Tabs over content the caller shows for `selected`: the selected one underlined.
+Tabs over content the caller shows for `selected`: the selected one underlined. Each tab is
+a target at least 44 points wide and tall, its text centered.
 
 ### Toolbar
 
@@ -3712,7 +3799,10 @@ A button that opens a menu of `options` (a line each); on_select gets the index 
 void Select(string options, int selected, escaping fn(int)->void on_change)
 ```
 
-One of `options` (a line each), chosen from a menu under a field that shows it.
+One of `options` (a line each), chosen from a menu under a field that shows it. A screen
+reader hears the field's name and the chosen option ("Sort, Newest first"): the name is a
+`label` given with ui_style_next just before (`ui_style_next(Style{label: "Sort"});`), which
+goes to the field rather than its wrapper; without one it hears the option alone.
 
 ### Tooltip
 
@@ -3722,6 +3812,19 @@ void Tooltip(string text, escaping fn()->void content)
 
 `text` in a bubble above `content` while a pointer is over it, or for a few seconds after a
 long press (a touch screen has no hover). The text is also the content's accessible name.
+
+### KIT_TOASTS_WAITING
+
+```eskiu
+#define KIT_TOASTS_WAITING 5
+```
+
+Toasts: kit_toast shows a short message at the bottom for a few seconds, through the
+ToastHost the app puts last in its root (it is absolute over the root's bottom). Messages
+shown while one is up wait their turn, each shown in full and announced to a screen reader.
+A message the same as the last one waiting is not queued again, and at most
+KIT_TOASTS_WAITING wait: a newer one drops the oldest waiting. With no host mounted, a toast
+is dropped.
 
 ### kit_toast
 
@@ -3929,7 +4032,18 @@ struct Theme {
 
 The theme: change its fields before mounting (colors are rgb()/rgba() values). `muted` text
 meets WCAG AA (4.5:1) on `page` and `surface`, and `control`, the border of what takes input,
-3:1 on `surface`; `line` is for separators, which need not stand out.
+3:1 on `surface`. `line` is decorative (separators, the edges of cards and panels), which
+WCAG 1.4.11 does not ask to stand out: no kit control has it as its only boundary, and a
+control of your own takes `control` for its border.
+
+### kit
+
+```eskiu
+Theme kit;
+```
+
+The kit's theme, which every kit component reads: change its fields before mounting, or
+change it later with kit_set.
 
 ### kit_light
 
@@ -3953,10 +4067,11 @@ The dark theme: the same roles in dark colors, with `dark` set; assign it (`kit 
 void kit_set(Theme theme)
 ```
 
-Makes `theme` the kit's, at any time (a settings screen, a handler): every kit component
-shows it right away, and text and controls with no color of their own take its ink and
-primary color (ui_text_color, ui_accent_color). Assigning `kit` directly works only at the
-top of the root block, before anything reads it.
+Makes `theme` the kit's, at any time (a settings screen, a handler): the app renders again
+from its root, so every kit component and every style the app computed from `kit` show it
+right away, and text, fields and controls with no color of their own take its ink, surface
+and primary color (ui_text_color, ui_field_color, ui_accent_color). Assigning `kit` directly
+works only at the top of the root block, before anything reads it.
 
 ### kit_dense
 
@@ -4379,6 +4494,29 @@ enum TextAlign { TextAlignDefault, TextAlignStart, TextAlignCenter, TextAlignEnd
 Where a text's lines sit (Style.text_align): the platform's default (the start), the start
 edge, centered, the end edge, or justified.
 
+### ui_text_color
+
+```eskiu
+int64 ui_text_color = -1;
+```
+
+The color of a Text or a TextInput whose Style sets none: -1 (the default) is the
+platform's text color, which follows the system's light or dark appearance. A theme that
+does not follow the system sets it (the kit's kit_follow_system sets it to `kit.ink`; after
+`kit = kit_dark();` set it yourself: `ui_text_color = kit.ink;`).
+
+### ui_field_color
+
+```eskiu
+int64 ui_field_color = -1;
+```
+
+The background of a TextInput whose Style sets neither a background nor a color while
+ui_text_color is set: -1 (the default) leaves it to the platform, whose field may not suit
+that text color (a white field on the web under the dark theme's light text). The kit's
+kit_follow_system and kit_set set it to the theme's `surface`; with ui_text_color set by
+hand, set this too (`ui_field_color = kit.surface;`).
+
 ### Role
 
 ```eskiu
@@ -4458,6 +4596,25 @@ int64 rgba(int r, int g, int b, int a)
 ```
 
 A color with alpha, each channel 0 to 255, as 0xRRGGBBAA.
+
+### ui_accent_color
+
+```eskiu
+int64 ui_accent_color = -1;
+```
+
+The color of a Switch or a Slider whose Style sets none, its accent: -1 (the default) is
+the platform's. The kit's kit_follow_system and kit_set set it to the theme's primary.
+
+### ui_right_click_long_press
+
+```eskiu
+bool ui_right_click_long_press = true;
+```
+
+Whether a right click on the web is also a long press for ui_on_long_press (true, the
+default: a mouse has no long press of its own). Set it false where the page should keep the
+browser's menu.
 
 ### ui_style_next
 

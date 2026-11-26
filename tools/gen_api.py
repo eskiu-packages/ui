@@ -7,7 +7,8 @@
 Run from the package root (the directory holding eskiu.toml). Every top-level public
 declaration of src/*.esk (a name not starting with `_`, not `extern` or `intrinsic`) is
 listed under its module with the comment block right above it: functions, structs,
-unions, interfaces, enums, type aliases and constants.
+unions, interfaces, enums, type aliases, constants (`const`, or a `#define` of a number) and
+global variables (not of a type whose name starts with `_`).
 A module's parts live in its private directory (`src/_module/`, imported with
 `import "_module/part.esk";`): they are not modules of their own, their declarations are listed
 under the module, in the place of the import. The comment at the top of a file
@@ -20,12 +21,20 @@ import sys
 
 API_SKIP = {"raw.esk"}
 
+# A comment that starts so is a host's entry point into the package (ui's host ABI): the entry
+# says it is not for apps.
+HOST_SIDE = "The host's side"
+HOST_ABI = ("*Host ABI*: called by the hosts in this repository, which are built from the same "
+            "release; not for apps, and outside the stability promise ([stability](stability.md)).")
+
 DECL_KW = re.compile(r"^(packed\s+)?(struct|union|interface|enum)\s+([A-Za-z_]\w*)")
 TYPE_RE = re.compile(r"^type\s+([A-Za-z_]\w*)\s*=")
 CONST_RE = re.compile(r"^const\s+.*?\b([A-Za-z_]\w*)\s*(\[[^\]]*\])?\s*=")
 FN_RE = re.compile(r"^(?:export\s+|must_use\s+|async\s+|deprecated\s*\([^)]*\)\s*)*"
                    r"[\w<>,\*\[\]\s?]+?[\s\*]([A-Za-z_]\w*)\s*(?:<[^>()]*>)?\s*\(")
 PART_RE = re.compile(r'^import\s+"([^"]+\.esk)"\s*;')
+DEFINE_RE = re.compile(r"^#define\s+([A-Za-z_]\w*)\s+-?\d[\w.]*\s*$")
+VAR_RE = re.compile(r"^(?!return\b)[\w<>,\*\[\]\s?]+?[\s\*]([A-Za-z_]\w*)\s*(\[[^\]]*\])?\s*(=[^;]*)?;\s*(//.*)?$")
 
 
 def private(rel):
@@ -249,6 +258,14 @@ def parse(path):
             comment = []
             i += 1
             continue
+        m = DEFINE_RE.match(line)
+        if m:
+            # a constant made with #define (a number): listed like a const
+            if not m.group(1).startswith("_"):
+                items.append(("const", m.group(1), line.strip(), comment_text(comment), comment != []))
+            comment = []
+            i += 1
+            continue
         if line.strip() == "" or line.startswith("#") or line.startswith("import ") \
                 or line[:1].isspace() or line.startswith("}"):
             if line.strip() == "" or line.startswith("import "):
@@ -331,7 +348,16 @@ def parse(path):
             comment = []
             i = nxt
             continue
-        # a global variable or something else: skip the statement
+        m = VAR_RE.match(line)
+        if m and "(" not in line.split("=")[0] and not line.lstrip("*").startswith("_"):
+            # a global variable an app sets or reads (ui_text_color): listed like a constant
+            name = m.group(1)
+            if not name.startswith("_"):
+                items.append(("var", name, strip_trailing_comment(line)[0].strip(), comment_text(comment), comment != []))
+            comment = []
+            i += 1
+            continue
+        # something else: skip the statement
         comment = []
         while i < len(lines) and not strip_trailing_comment(lines[i])[0].rstrip().endswith(";"):
             i += 1
@@ -402,6 +428,8 @@ def build():
             body += [f"### {name}", "", "```eskiu", text, "```", ""]
             if cmt:
                 body += [cmt, ""]
+            if cmt.startswith(HOST_SIDE):
+                body += [HOST_ABI, ""]
     out += toc + body
     while out and out[-1] == "":
         out.pop()
