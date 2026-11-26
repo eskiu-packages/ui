@@ -44,6 +44,12 @@ running, with no browser or simulator window. Its output goes to
 - **android.** The device or emulator `adb` sees (`ANDROID_SERIAL` picks one). The app is
   built for its ABI: arm64-v8a, or x86_64 on an x86_64 emulator (`UI_ANDROID_ABI` sets it).
 
+`ui agent web --locale ar` (or `UI_LOCALE=ar`) opens the page with that language instead of
+the browser's, so a right-to-left layout can be driven and tested: the page's address carries
+it (`#ui-agent:390x844:ar`), the app reads it from `ui_locale()` and the page is laid out right
+to left. A browser running with another language is started again with this one. `ui test web
+--locale ar` runs tests that way; the other hosts take the system's language.
+
 `ui agent HOST --stop` stops what it started: the browser, `ui serve HOST` and the app.
 The browser runs with `--hide-scrollbars`, so a scroll's content is as wide on every system;
 `UI_CHROME_ARGS` adds flags (CI's Linux runner needs `--no-sandbox`).
@@ -57,6 +63,11 @@ ui agent: the build of these sources failed:
 error: src/main.esk:52:12: Expected declaration, got EOF
 Fix it and save; ui serve web builds again (ui agent web ... retries once it built).
 ```
+
+A build that works can still have warnings (a `textf` whose arguments do not match its
+format, a deprecated call). `ui agent` and `ui test` show them once per build: as text on
+standard error (`ui: the build has warnings:` and the compiler's lines), or with `--json` as
+[JSON diagnostics](#diagnostics-as-json) with `"severity": "warning"` before the first answer.
 
 ## Targets
 
@@ -304,7 +315,8 @@ same either way. The last line is the result: `{"ok": true, "built": PATH}` or `
 `ui test --json` writes a line per step that passed, `{"ok": true, "host", "line", "step"}`, then
 a line per test, `{"test", "host", "file", "ok", "steps", "seconds"}` with the failed `"line"`,
 `"step"` and `"error"`, then `{"ok", "passed", "failed"}`; a build that failed comes first as its
-diagnostics.
+diagnostics, and so do the warnings of a build that worked (once per build). `ui agent --json`
+writes them the same way before its answers.
 
 ## Testing an app
 
@@ -363,8 +375,8 @@ which runs code on a worker built from that image:
 | Tool | What it does |
 |---|---|
 | `eskiu_run` | Compiles and runs a program; exit code, stdout, stderr, and the errors as JSON diagnostics |
-| `eskiu_ui_render` | Builds `src/main.esk` for the web, applies `ui agent` ops in order, returns each answer, the tree and a screenshot |
-| `eskiu_ui_test` | Runs a `.uitest` file against `src/main.esk`; PASSED or FAILED with each step's result |
+| `eskiu_ui_render` | Builds `src/main.esk` for the web, applies `ui agent` ops in order, returns each answer, the tree and a screenshot, and the build's warnings |
+| `eskiu_ui_test` | Runs a `.uitest` file against `src/main.esk`; PASSED or FAILED with each step's result, and the build's warnings |
 
 Each takes the main file as `code` and the other source files it imports as `files`, by
 path relative to it (`{"counter.esk": "..."}`).
