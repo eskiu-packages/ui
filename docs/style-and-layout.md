@@ -60,8 +60,9 @@ Column(Style{padding: 16, gap: 12, background: rgb(255, 255, 255), radius: 16}) 
 | `layout_ms` | 0 | When the layout moves or resizes the element, it slides and grows there over this many milliseconds with `easing`, instead of jumping (skipped when the system asks for reduced motion). |
 
 A field left at its default is not sent to the host, and changing one sends only that
-field. A `Button`, or a one-line `TextInput`, given no size is at least 44 points tall (a
-`Button` also 44 wide), the smallest target for a finger. Text with no `color` takes
+field. A `Button`, a `Slider` or a one-line `TextInput` given no size is at least 44 points
+tall (a `Button` also 44 wide; a `Slider`'s track keeps its size, centered), the smallest
+target for a finger. Text with no `color` takes
 `ui_text_color`, and a `Switch` or `Slider` with none takes `ui_accent_color` as its accent
 (both -1 by default: the platform's; the kit's themes set them).
 
