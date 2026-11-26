@@ -4,6 +4,70 @@ All notable changes to ui are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `ui_field_color`: the background of a TextInput with neither a color nor a background of its
+  own while `ui_text_color` sets its text; `kit_set` and `kit_follow_system` set it to the
+  theme's `surface`.
+- `ui agent --locale TAG` and `ui test --locale TAG` (or `UI_LOCALE`): the web page takes that
+  language instead of the browser's (`#ui-agent:390x844:ar`), so right to left can be driven
+  and tested.
+- `ui test`: `expect ID visible` and `expect ID hidden`, as `layout` says.
+- A Select heard with its name: a `label` given with `ui_style_next` just before a `Select`
+  names its field ("Sort, Newest first") instead of going to its wrapper.
+- `renderer.mjs`'s `applyLocale(app, root, language)`: reports the language to the app and sets
+  the page's `lang` and the body's and the root's `dir`, for a page that makes its own host.
+- `docs/api.md` lists the globals an app sets (`ui_text_color`, `ui_field_color`,
+  `ui_accent_color`, `ui_right_click_long_press`, `ui_edge_policy`, `kit`, `kit_text`) and
+  `#define` constants (`KIT_TOASTS_WAITING`), and marks the functions a host calls as *Host
+  ABI* (`tools/gen_api.py`).
+- `tests/checks`: a scene for each behavior below, with UI tests CI runs on the web.
+
+### Changed
+
+- A route starts with `/`: `router_new("home")`, `push("details")`, `replace` and `reset` keep
+  `/home`, `/details`. An app that compared `router.path()` with a route without `/` compares
+  it with the `/` now (`route_match` was already indifferent to it).
+- A link to the page's own address (`/`) is the router's root, never a route pushed over it.
+- Internal globals start with `_` (`_ui_drv`, `_ui_store`, `_kit_toast_queue`...); they were
+  not in `docs/api.md`.
+- A Slider the app gives no size is a 44-point target, its track centered and as big as before.
+- `TabBar`'s and `SegmentedControl`'s tabs are at least 44 points wide (a short tab's text
+  centered).
+- A Select's field and a ColorPicker's swatch are bordered with the theme's `control` (3:1),
+  not `line`, which stays for separators and the edges of cards and panels (decorative).
+- `ui agent` and `ui test` show a build's warnings once per build: as text on standard error,
+  or as JSON diagnostics (`"severity": "warning"`) with `--json`. The `Built PATH` line no
+  longer comes as a note of the last warning.
+- docs/platform.md: on the web `ui_screen_reader()` is always false, a platform limitation.
+- docs/components.md: `line` is decorative (WCAG 1.4.11 does not ask it to stand out); a control
+  of an app's own takes `control` for its border.
+- docs/stability.md: the host ABI and the global `ui` are outside the stability promise.
+
+### Fixed
+
+- `kit_set` from a handler reaches the style an app computed from `kit` in a block that reads
+  no signal (the root's `Column(Style{background: kit.page})`, a row in App): the root follows
+  the theme and renders the app again.
+- A plain TextInput under the kit's dark theme had the theme's light text on the browser's
+  white field (1.10:1); it takes the theme's surface now (on Windows' white EDIT too).
+- The web showed a broken-image icon again for an image that could not be loaded (one with no
+  label, or a prerendered one that failed before the renderer took it): it shows only its
+  background.
+- `router_new("home")` on the web put `/` on top of the root (a stack of `home > /`).
+- `ui test`'s `expect` matched elements of the screens under the top one ("2 elements match
+  title" after a push), and a frame of a text inside the button it names; it follows the
+  driver's rule now.
+- `layout`'s `visible` was true for rows a Scroll cut off inside the window on the web, macOS,
+  Linux and Windows (iOS and Android had it right).
+- A timer's error pointed at the scope that made it; it points at the `use_timeout` or
+  `use_interval` call when that is in the app's code.
+- Right to left on the web: the renderer sets the direction (`applyLocale`), on the body as well
+  as the app's root (alerts and announcements too), and a prerendered first frame is laid out
+  right to left before the module runs.
+
 ## [0.7.0] - 2026-11-21
 
 Needs Eskiu 0.16.2 (it compiles with 0.16.1, but 0.16.2 passes `Style` by pointer, which
