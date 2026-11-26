@@ -53,6 +53,7 @@ int main() {
     driver_state_hidden(); printf("PASS driver state hidden\n");
     kit_live(); printf("PASS kit live\n");
     kit_set_root(); printf("PASS kit set root\n");
+    targets_44(); printf("PASS targets\n");
     layout_props(); printf("PASS layout props\n");
     driver_access(); printf("PASS driver access\n");
     textf_texts(); printf("PASS textf\n");

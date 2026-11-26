@@ -311,3 +311,28 @@ void kit_set_root() {
     ui_accent_color = -1;
     balanced("kit set root leak");
 }
+
+// Targets: a Slider is 44 points tall, a TabBar's and a SegmentedControl's tabs at least 44
+// wide.
+void targets_44() {
+    Ui runtime;
+    ui_init(&runtime, record);
+    ui_mount() {
+        Slider(Style{}, 1, 0, 2, void(int v) {});
+        TabBar("A\nB", 0, void(int i) {});
+        SegmentedControl("C\nD", 0, void(int i) {});
+    }
+    ui_frame();
+    *Node column = ui.root;
+    *Node slider = null;
+    for (i in 1..ui.by_id.size) {
+        *Node node = ui.by_id.data[i];
+        if (node != null && node.kind == 15) { slider = node; }
+    }
+    check(slider != null && slider.props[44] == 44, "a Slider is a 44-point target");
+    *Node tab = find_label(column, "A");
+    *Node segment = find_label(column, "C");
+    check(tab != null && tab.props[42] == 44 && tab.props[44] == 44, "a tab is at least 44 by 44");
+    check(segment != null && segment.props[42] == 44, "a segment is at least 44 wide");
+    ui_shutdown(); balanced("targets leak");
+}
