@@ -10,6 +10,7 @@
 import {aria, setRole, menuItemRole, disabledAbove, applyDisabled, setMultiline, focusTrap, INPUT_MODES, ENTER_HINTS, CAPITALIZE, AUTOFILL,
   TEXT_ALIGN, applyPadding, maxLines, watchImage} from './access.mjs';
 import {styleProp, accent, layoutMotion, appear} from './style.mjs';
+export {applyLocale} from './access.mjs';
 import {createUpdates} from './updates.mjs';
 
 // Style.font: a font file loaded once as its own family, with the system font behind it while
@@ -102,23 +103,6 @@ function cssColor(value) {
   const v = value >>> 0;
   if (v === 0) return '';
   return `rgba(${v >>> 24}, ${(v >>> 16) & 255}, ${(v >>> 8) & 255}, ${(v & 255) / 255})`;
-}
-
-// Languages written right to left (by their first subtag).
-const RTL = /^(ar|fa|he|ur|ps|yi|dv|ku|sd|ug)(-|$)/i;
-
-// The page's language to the app (ui_report_locale) and to the page: `lang` on the document,
-// `dir` on the body and the app's root, so a right-to-left language lays the app out right to
-// left (rows, start and end, the text's start mirror; alerts and announcements too). The
-// document itself keeps its direction, so a page narrower than the browser (`ui agent`'s) stays
-// at its left. True when it is right to left. A page that makes its own host calls it with the
-// language it wants.
-export function applyLocale(app, root, language) {
-  const rtl = RTL.test(language);
-  app.ccall('ui_report_locale', null, ['string', 'number'], [language, rtl ? 1 : 0]);
-  globalThis.document?.documentElement?.setAttribute?.('lang', language);
-  for (const element of [globalThis.document?.body, root]) element?.setAttribute?.('dir', rtl ? 'rtl' : 'ltr');
-  return rtl;
 }
 
 // A commit's fingerprint: FNV-1a over its mutations, as hex. The prerendered page

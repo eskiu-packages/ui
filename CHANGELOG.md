@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ui test`: `expect ID visible` and `expect ID hidden`, as `layout` says.
 - A Select heard with its name: a `label` given with `ui_style_next` just before a `Select`
   names its field ("Sort, Newest first") instead of going to its wrapper.
-- `renderer.mjs`'s `applyLocale(app, root, language)`: reports the language to the app and sets
+- `applyLocale(app, root, language)` (hosts/web/access.mjs, exported by renderer.mjs too): reports the language to the app and sets
   the page's `lang` and the body's and the root's `dir`, for a page that makes its own host.
 - `docs/api.md` lists the globals an app sets (`ui_text_color`, `ui_field_color`,
   `ui_accent_color`, `ui_right_click_long_press`, `ui_edge_policy`, `kit`, `kit_text`) and

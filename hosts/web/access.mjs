@@ -1,6 +1,7 @@
 // Accessibility and text input options for the web renderer (renderer.mjs): Style's role and
 // states (props 57 to 64) as ARIA, disabled (prop 61) down a subtree, a text input's editing
-// options (props 65 to 71), and an open modal taking the keyboard.
+// options (props 65 to 71), an open modal taking the keyboard, and the page's language and
+// direction (applyLocale, which renderer.mjs exports too).
 
 const ROLES = {1: 'button', 2: 'link', 3: 'heading', 4: 'img', 5: 'checkbox', 6: 'radio', 7: 'radiogroup', 8: 'switch',
   9: 'tab', 10: 'tablist', 11: 'slider', 12: 'progressbar', 13: 'menu', 14: 'menuitem', 15: 'list', 16: 'listitem',
@@ -155,4 +156,21 @@ export function watchImage(node, report) {
   node.addEventListener?.('load', () => tell(true));
   node.addEventListener?.('error', () => tell(false));
   if (node.complete && node.getAttribute?.('src') && node.naturalWidth === 0) queueMicrotask(() => tell(false));
+}
+
+// Languages written right to left (by their first subtag).
+const RTL = /^(ar|fa|he|ur|ps|yi|dv|ku|sd|ug)(-|$)/i;
+
+// The page's language to the app (ui_report_locale) and to the page: `lang` on the document,
+// `dir` on the body and the app's root, so a right-to-left language lays the app out right to
+// left (rows, start and end, the text's start mirror; alerts and announcements too). The
+// document itself keeps its direction, so a page narrower than the browser (`ui agent`'s) stays
+// at its left. True when it is right to left. A page that makes its own host calls it with the
+// language it wants.
+export function applyLocale(app, root, language) {
+  const rtl = RTL.test(language);
+  app.ccall('ui_report_locale', null, ['string', 'number'], [language, rtl ? 1 : 0]);
+  globalThis.document?.documentElement?.setAttribute?.('lang', language);
+  for (const element of [globalThis.document?.body, root]) element?.setAttribute?.('dir', rtl ? 'rtl' : 'ltr');
+  return rtl;
 }
