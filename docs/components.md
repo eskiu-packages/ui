@@ -132,7 +132,8 @@ void ui_app_start(int which) {
 | `primary_soft` | light indigo | avatars |
 | `ink`, `muted` | near black, gray | text, secondary text |
 | `page`, `surface` | light gray, white | the page, cards and fields |
-| `line`, `control`, `track` | grays | borders, unchecked controls, tracks |
+| `line` | light gray | separators and the edges of cards and panels: decorative, below 3:1 on purpose |
+| `control`, `track` | grays | the border of what takes input (3:1 on `surface`), unchecked controls; tracks |
 | `danger` | red | danger buttons |
 | `radius` | 12 | corners |
 
@@ -191,7 +192,11 @@ ink, surface (as a plain field's background) and primary color (`ui_text_color`,
 `ui_field_color`, `ui_accent_color`). Assigning `kit` directly works at the top of the root
 block, before anything reads it. `examples/kit-gallery` shows every component, in both. The themes' secondary text (`muted`)
 meets WCAG AA contrast on the page and on surfaces, and `control`, the border of what takes
-input, 3:1.
+input, 3:1. `line` (1.24:1 on `surface`) is decorative: separators and the edges of cards,
+toolbars and panels, which WCAG 1.4.11 does not ask to stand out. No control relies on it as its
+only boundary: fields, a `Select`, a `DatePicker`, checkboxes and radios are drawn with
+`control`, a button is told by its text and fill. Use `control`, not `line`, for the border of
+a control of your own.
 
 The kit's words are `kit_text`, a `KitText`: month and weekday names, the first day of the
 week, how a date is written, and what its components say to a screen reader ("Previous month",

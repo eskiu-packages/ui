@@ -15,11 +15,14 @@ A few internal names have no `_` because hosts or packages reach them, and they 
 of the promise either:
 
 - The runtime's own types: `Ui`, `Node`, `Source`, `Edge`, `Pending`, `KeyTable`, `Commit`
-  and their methods. A package that needs one (a hook built on `ui_slot`, a native module) is tied to the
+  and their methods, and the global `ui` that holds the runtime. A package that needs one (a hook built on `ui_slot`, a native module) is tied to the
   ui release it was built for, and says so in its `eskiu.toml`.
 - The host ABI: what `hosts/core.h` lists (`ui_start`, `ui_dispatch_*`, `ui_report_*`,
-  `ui_tick`, `ui_splash`...) and the commit format of `src/core/wire.esk`. They change with
-  the hosts in this repository, which are built from the same release.
+  `ui_tick`, `ui_splash`...), the core's functions a host calls (`ui_init`, `ui_frame`,
+  `ui_complete`, `ui_event_*`, `ui_set_*_host`..., marked *Host ABI* in `docs/api.md`) and the
+  commit format of `src/core/wire.esk`. They change with the hosts in this repository, which
+  are built from the same release; an app never calls them. They keep their names (no `_`)
+  because the hosts in C, Objective-C, Java and JavaScript name them.
 
 Some names without `_` are public for the authors of components, packages and tests rather
 than for apps, and are part of the promise: `ui_own`, `ui_own_fn` and the `ui_release_*`

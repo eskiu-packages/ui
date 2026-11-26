@@ -74,7 +74,13 @@ void App() {
 `ui_screen_reader()` is true while VoiceOver or TalkBack runs, `ui_reduce_motion()` when the
 user asked for less motion (on Android, animations turned off), and `ui_font_scale()` is the
 text size the user chose, in percent (100 by default). The web reports reduced motion from
-its media query and no screen reader.
+its media query.
+
+On the web `ui_screen_reader()` is always false: a page cannot tell whether a screen reader
+runs (browsers do not expose it, on purpose). This is a platform limitation, not a setting to
+check: an app gives every user the accessible version on the web (labels, roles, the delete
+button `SwipeToDelete` shows with a screen reader on) or offers it in its settings, and keeps
+`ui_screen_reader()` for what the phones and desktops add on top.
 
 Text follows the system's text size by itself: font sizes are scaled on iOS (Dynamic Type),
 Android (sizes in sp), Linux (GNOME's text scaling factor) and Windows (the text size
