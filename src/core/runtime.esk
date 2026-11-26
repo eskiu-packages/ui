@@ -209,7 +209,9 @@ void ui_init(*Ui runtime, escaping fn(*uint8, int)->void apply) {
     ui.generations.push(0);
     *Node root = alloc<Node>(1);
     _ui_assign_id(root);
-    root.block = void() { ui_boundary_block(); };
+    // The root reads the theme, so a theme change (kit_set) renders the whole tree again: style
+    // an app computed from the theme in a block that reads no signal follows it too.
+    root.block = void() { ui.theme.get(); ui_boundary_block(); };
     root.handler = void() {}; root.handler_cleanup = void() {};
     root.observer = _ui_observer(0, root);
     root.boundary = alloc<Boundary>(1);

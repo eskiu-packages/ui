@@ -184,9 +184,10 @@ smaller (see density below).
 `kit_light()` and `kit_dark()` are the two themes, to assign (`kit = kit_dark();`; calling one
 alone does nothing, and the compiler says so); `kit_follow_system()` picks the one for the
 system's appearance ([the platform](platform.md)) and the density for the window's width.
-`kit_set(theme)` changes the theme at any time (a setting, a handler): every kit
-component shows it at once, and plain text and controls take its ink and primary color
-(`ui_text_color`, `ui_accent_color`). Assigning `kit` directly works at the top of the root
+`kit_set(theme)` changes the theme at any time (a setting, a handler): the app renders again
+from its root, so every kit component and every style the app computed from `kit` (a root
+`Column(Style{background: kit.page})`) show it at once, and plain text and controls take its
+ink and primary color (`ui_text_color`, `ui_accent_color`). Assigning `kit` directly works at the top of the root
 block, before anything reads it. `examples/kit-gallery` shows every component, in both. The themes' secondary text (`muted`)
 meets WCAG AA contrast on the page and on surfaces, and `control`, the border of what takes
 input, 3:1.
