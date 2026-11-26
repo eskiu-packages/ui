@@ -23,16 +23,24 @@
   #app input[role=switch]:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
 </style>
 <div id="app"></div>
+<script>
+  // The language before the module runs, so a prerendered first frame of a right-to-left
+  // language is laid out right to left too: `ui agent` forces one with #ui-agent:WxH:LANG,
+  // else the browser's. The module reports it to the app (renderer.mjs's applyLocale).
+  globalThis.uiLanguage = () => location.hash.match(/^#ui-agent:\d+x\d+:([A-Za-z0-9-]+)$/)?.[1] || navigator.language || 'en';
+  document.body.dir = /^(ar|fa|he|ur|ps|yi|dv|ku|sd|ug)(-|$)/i.test(uiLanguage()) ? 'rtl' : 'ltr';
+  document.documentElement.lang = uiLanguage();
+</script>
 {{splash}}<script type="module">
   // The page `ui build web` makes for an app: the app fills the window.
   import createApp from './app.mjs';
-  import {createHost, uiDispatch, withStrings} from './renderer.mjs';
+  import {createHost, uiDispatch, withStrings, applyLocale} from './renderer.mjs';
   import {createFrameScheduler} from './scheduler.mjs';
   import {setupNative} from './native.mjs';
   const root = document.querySelector('#app');
   // `ui agent` opens the page as #ui-agent:WIDTHxHEIGHT: the app gets a window of that size
   // (a phone's), whatever size the browser made its own.
-  const agentWindow = location.hash.match(/^#ui-agent:(\d+)x(\d+)$/);
+  const agentWindow = location.hash.match(/^#ui-agent:(\d+)x(\d+)(:[A-Za-z0-9-]+)?$/);
   if (agentWindow) {
     Object.assign(document.documentElement.style,
       {width: `${agentWindow[1]}px`, height: `${agentWindow[2]}px`, overflow: 'hidden'});
@@ -69,11 +77,8 @@
   const reportSystem = () => {
     app._ui_report_appearance(dark.matches ? 1 : 0);
     app._ui_report_accessibility(0, still.matches ? 1 : 0, 100);
-    const language = navigator.language || 'en';
-    const rtl = /^(ar|fa|he|ur|ps|yi|dv|ku|sd|ug)(-|$)/.test(language);
-    app.ccall('ui_report_locale', null, ['string', 'number'], [language, rtl ? 1 : 0]);
     // A right-to-left language lays the app out right to left: rows, start and end mirror.
-    document.getElementById('app')?.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+    applyLocale(app, root, uiLanguage());
   };
   reportSystem();
   dark.addEventListener('change', reportSystem);
