@@ -280,6 +280,7 @@ void kit_live() {
     ui_shutdown();
     kit = kit_light();
     ui_text_color = -1;
+    ui_field_color = -1;
     ui_accent_color = -1;
     balanced("kit live leak");
 }
@@ -293,6 +294,7 @@ void kit_set_root() {
     ui_mount() {
         Column(Style{background: kit.page, test_id: "page"}) {
             Row(Style{background: kit.surface, test_id: "row"}) { TextWith(Style{color: kit.ink}, "Row"); }
+            TextInput(Input{value: "typed"}, void(string text) {});
         }
     }
     ui_frame();
@@ -302,12 +304,16 @@ void kit_set_root() {
     check(page.props[8] == kit_dark().page, "the root's page takes the dark theme");
     check(page.children.data[0].props[8] == kit_dark().surface, "and the row computed in App");
     check(page.children.data[0].children.data[0].props[9] == kit_dark().ink, "and its text");
+    *Node field = page.children.data[1];
+    check(field.props[9] == kit_dark().ink && field.props[8] == kit_dark().surface,
+        "a plain field takes the theme's ink on its surface, not the platform's field");
     kit_set(kit_light());
     ui_frame();
     check(page.props[8] == kit_light().page, "and back to the light theme");
     ui_shutdown();
     kit = kit_light();
     ui_text_color = -1;
+    ui_field_color = -1;
     ui_accent_color = -1;
     balanced("kit set root leak");
 }

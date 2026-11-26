@@ -625,7 +625,11 @@ struct InputExtra { fn(string)->void on_text; fn(bool)->void on_focus; bool has_
     ui_prop(node, fresh, 5, style.height, 0);
     ui_prop(node, fresh, 6, style.grow, 0);
     ui_prop(node, fresh, 7, style.wrap ? 1 : 0, 0);
-    ui_prop(node, fresh, 8, style.background, -1);
+    // A TextInput with no background or color of its own, while ui_text_color sets its text,
+    // takes ui_field_color: the field and its text come from the same theme, not the text from
+    // the app's and the field from the platform's (white on the web and Windows).
+    bool themed_field = node.kind == 5 && style.background == -1 && style.color == -1 && ui_text_color != -1;
+    ui_prop(node, fresh, 8, themed_field && ui_field_color != -1 ? ui_field_color : style.background, -1);
     // Text with no color of its own takes the app's (ui_text_color), else the platform's.
     int64 color = style.color == -1 && (node.kind == 3 || node.kind == 5) ? ui_text_color
                 : style.color == -1 && (node.kind == 9 || node.kind == 15) ? ui_accent_color : style.color;

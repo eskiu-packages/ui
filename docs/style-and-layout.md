@@ -63,8 +63,10 @@ A field left at its default is not sent to the host, and changing one sends only
 field. A `Button`, a `Slider` or a one-line `TextInput` given no size is at least 44 points
 tall (a `Button` also 44 wide; a `Slider`'s track keeps its size, centered), the smallest
 target for a finger. Text with no `color` takes
-`ui_text_color`, and a `Switch` or `Slider` with none takes `ui_accent_color` as its accent
-(both -1 by default: the platform's; the kit's themes set them).
+`ui_text_color`, a `TextInput` with neither a color nor a background takes `ui_field_color`
+as its background while `ui_text_color` is set (so a light text never sits on the browser's
+white field), and a `Switch` or `Slider` with none takes `ui_accent_color` as its accent (all
+-1 by default: the platform's; the kit's themes set them).
 
 A component that takes no `Style` (a kit component, one from a package) still takes a few of
 its fields with `ui_style_next`, which puts them on the next element made:

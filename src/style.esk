@@ -103,6 +103,13 @@ enum TextAlign { TextAlignDefault, TextAlignStart, TextAlignCenter, TextAlignEnd
 // `kit = kit_dark();` set it yourself: `ui_text_color = kit.ink;`).
 int64 ui_text_color = -1;
 
+// The background of a TextInput whose Style sets neither a background nor a color while
+// ui_text_color is set: -1 (the default) leaves it to the platform, whose field may not suit
+// that text color (a white field on the web under the dark theme's light text). The kit's
+// kit_follow_system and kit_set set it to the theme's `surface`; with ui_text_color set by
+// hand, set this too (`ui_field_color = kit.surface;`).
+int64 ui_field_color = -1;
+
 // What an element is to a screen reader (Style.role). RoleNone: what its kind says (a Button
 // is a button, a TextInput a text field, the rest a group or plain text).
 enum Role { RoleNone, RoleButton, RoleLink, RoleHeader, RoleImage, RoleCheckbox, RoleRadio, RoleRadioGroup, RoleSwitch,
