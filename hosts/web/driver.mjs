@@ -102,12 +102,31 @@ async function carry(app, host, d) {
     const rows = [];
     // The app's window: the page, or the phone-sized box an agent page gets (#ui-agent).
     const view = document.getElementById('app')?.getBoundingClientRect?.() ?? {top: 0, left: 0, bottom: innerHeight, right: innerWidth};
+    // Each element that clips what is inside it (a scroll, Style.clip) and its box, once per
+    // request.
+    const clips = new Map();
+    const clipOf = element => {
+      if (!clips.has(element)) {
+        const style = getComputedStyle(element);
+        const clipping = style.overflowX !== 'visible' || style.overflowY !== 'visible';
+        clips.set(element, clipping ? element.getBoundingClientRect() : null);
+      }
+      return clips.get(element);
+    };
+    // Some of `box` inside `area` (an empty box: its corner inside it).
+    const inside = (box, area) => (box.width === 0 || box.height === 0)
+      ? box.left >= area.left && box.left <= area.right && box.top >= area.top && box.top <= area.bottom
+      : box.bottom > area.top && box.right > area.left && box.top < area.bottom && box.left < area.right;
     for (const [id, element] of host.nodes) {
       const box = element.getBoundingClientRect();
-      // Shown: laid out (not display:none) and at least partly inside the window, so a row
-      // scrolled away is not visible.
-      const inWindow = box.bottom > view.top && box.right > view.left && box.top < view.bottom && box.left < view.right;
-      const shown = element.getClientRects().length > 0 && inWindow;
+      // Shown: laid out (not display:none) and at least partly inside the window and inside
+      // every element above it that clips (a scroll's viewport), so a row scrolled away, or
+      // cut off by its scroll, is not visible.
+      let shown = element.getClientRects().length > 0 && inside(box, view);
+      for (let up = element.parentElement; shown && up && up !== document.body; up = up.parentElement) {
+        const area = clipOf(up);
+        if (area && !inside(box, area)) shown = false;
+      }
       const r = v => Math.round(v * 10) / 10;
       rows.push(`${id} ${r(box.left)} ${r(box.top)} ${r(box.width)} ${r(box.height)} ${shown ? 1 : 0}`);
     }

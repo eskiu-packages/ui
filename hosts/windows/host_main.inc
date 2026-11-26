@@ -6,6 +6,25 @@ static void runConformance();
 
 #ifdef UI_TEST
 static void driverOnMain(std::function<void()> work) { onMain(std::move(work)); }
+// Whether some of the window is inside each window above it (a child window is clipped to its
+// parent's client area, a scroll's included): a row a scroll cut off is not visible. An empty
+// window counts by its corner.
+static bool insideClips(HWND hwnd) {
+    RECT box;
+    if (!GetWindowRect(hwnd, &box)) return true;
+    bool empty = box.right <= box.left || box.bottom <= box.top;
+    HWND desktop = GetDesktopWindow();
+    for (HWND up = GetAncestor(hwnd, GA_PARENT); up && up != desktop; up = GetAncestor(up, GA_PARENT)) {
+        RECT area;
+        GetClientRect(up, &area);
+        MapWindowPoints(up, nullptr, (POINT *)&area, 2);
+        if (empty) {
+            if (box.left < area.left || box.left > area.right || box.top < area.top || box.top > area.bottom) return false;
+        } else if (!IntersectRect(&box, &box, &area)) return false;
+    }
+    return true;
+}
+
 static std::string driverCarry(const std::string &directive);
 #define UI_DRIVER_HOST_REQUESTS 1
 static bool driverHostRequest(const std::string &request, std::string &answer);
@@ -112,7 +131,7 @@ static std::string driverCarry(const std::string &d) {
             if (!node->hwnd) continue;
             double x, y;
             bool attached = frameOf(node, x, y);
-            bool shown = attached && IsWindowVisible(node->hwnd);
+            bool shown = attached && IsWindowVisible(node->hwnd) && insideClips(node->hwnd);
             for (Node *up = node; up && shown; up = parentNode(up)) if (up->opacity <= 0) shown = false;
             snprintf(line, sizeof line, "%d %.1f %.1f %.1f %.1f %d\n", node->id, x, y, node->w, node->h, shown ? 1 : 0);
             rows += line;

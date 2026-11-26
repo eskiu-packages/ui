@@ -324,6 +324,9 @@ static std::string driverCarry(const std::string &d) {
             NSRect r = windowFrame(view);
             bool shown = view.window != nil && !view.hiddenOrHasHiddenAncestor;
             for (NSView *up = view; up && shown; up = up.superview) if (up.alphaValue <= 0) shown = false;
+            // Some of it inside the window and every view above it (a scroll's clip view): a row
+            // a scroll cut off is not visible. An empty view keeps what the checks above say.
+            if (shown && r.size.width > 0 && r.size.height > 0 && NSIsEmptyRect(view.visibleRect)) shown = false;
             snprintf(line, sizeof line, "%d %.1f %.1f %.1f %.1f %d\n", node.nodeId, r.origin.x, r.origin.y, r.size.width,
                      r.size.height, shown ? 1 : 0);
             rows += line;

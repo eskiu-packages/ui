@@ -398,6 +398,23 @@ static bool shows(Node *node) {
     return true;
 }
 
+// Whether some of the node's box is inside the window and every widget above it that clips
+// (a scrolled window, a hidden overflow): a row a scroll cut off is not visible. An empty box
+// counts as inside.
+static bool insideClips(Node *node) {
+    GtkWidget *box = node->box;
+    if (gtk_widget_get_width(box) <= 0 || gtk_widget_get_height(box) <= 0) return true;
+    for (GtkWidget *up = gtk_widget_get_parent(box); up; up = gtk_widget_get_parent(up)) {
+        bool clips = GTK_IS_SCROLLED_WINDOW(up) || gtk_widget_get_overflow(up) == GTK_OVERFLOW_HIDDEN || !gtk_widget_get_parent(up);
+        graphene_rect_t bounds;
+        if (!clips || !gtk_widget_compute_bounds(box, up, &bounds)) continue;
+        double width = gtk_widget_get_width(up), height = gtk_widget_get_height(up);
+        if (bounds.origin.x + bounds.size.width <= 0 || bounds.origin.y + bounds.size.height <= 0 ||
+            bounds.origin.x >= width || bounds.origin.y >= height) return false;
+    }
+    return true;
+}
+
 static std::string driverCarry(const std::string &d) {
     std::string op = driverOp(d);
     if (op == "hello" || op == "clock") {
@@ -414,7 +431,8 @@ static std::string driverCarry(const std::string &d) {
             if (!node->box || !node->yoga) continue;
             double x = 0, y = 0;
             windowPoint(node, x, y);
-            snprintf(line, sizeof line, "%d %.1f %.1f %.1f %.1f %d\n", node->id, x, y, node->w, node->h, shows(node) ? 1 : 0);
+            snprintf(line, sizeof line, "%d %.1f %.1f %.1f %.1f %d\n", node->id, x, y, node->w, node->h,
+                     shows(node) && insideClips(node) ? 1 : 0);
             rows += line;
         }
         return rows;
