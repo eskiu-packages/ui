@@ -102,11 +102,14 @@ word with blanks is written in double quotes (`"Open sheet"`, with `\"` and `\\`
 | `expect ID text "T"` | the element's text is T; for a container, the texts inside it in order, a space between each |
 | `expect ID prop NAME VALUE` | a prop the app set (`tree` leaves out defaults: `background "#ff0000ff"`, `radius 8`, `on 1`), or a member of the element (`label`, `placeholder`, `key`) |
 | `expect ID frame X Y W H [±TOL] [in OTHER]` | the frame the host laid out, in points from the window's top left or OTHER's; `_` takes any value; each within TOL, 1 by default (`+-2` works too) |
+| `expect ID visible` / `expect ID hidden` | whether the element shows, as `layout` says: laid out, and some of it inside the window and every scroll or clip above it |
 | `expect state PATH VALUE` | a member of `state` (`modals`, `timers`, `fetches`, `frames`, `clock`, `now`; `routes` as `/ > /places/2`), or `SCOPE.N`, the Nth signal of a scope: SCOPE is its test_id, its component name or its path as `ui agent state` prints it |
 | `expect screenshot NAME [T%]` | the window against `screenshots/NAME.HOST.png` next to the test; at most T% of the pixels (0.1% by default) may differ by more than 24 of 255 in a channel. A missing reference is recorded and passes (commit it); `--update` records them all again. Opt in: a test has none unless it says so |
 
 IDs follow `ui agent`'s rule: a test_id, else an accessible name (a label, a text's or a
-button's own text), or `#12`. VALUE is compared by its kind: a number by value, `true` and
+button's own text), or `#12`. What is on a screen a Navigator keeps under its top one counts
+only when nothing that shows matches, so after a push `title` is the top screen's; and a text
+inside a button named by it is the button, for a frame too. VALUE is compared by its kind: a number by value, `true` and
 `false`, a string as written, an array or object as JSON.
 
 A failure names the file, the line and what was found, and the file stops there:
@@ -124,8 +127,15 @@ A screenshot that differs leaves the new one and a diff (the differing pixels re
 browser's version): record the references on the machine that checks them, as CI uploads
 them.
 
+`--locale TAG` (or `UI_LOCALE`) runs the tests on the web with that language instead of the
+browser's, to test right to left: `ui test web --locale ar tests/rtl`.
+
 `ui new` makes `tests/ui/app.uitest`. In this repository `tests/conformance`,
-`examples/counter` and `tests/bench` have UI tests.
+`examples/counter`, `tests/bench` and `tests/checks` have UI tests. `tests/checks` holds a
+scene for each behavior an audit found broken (the theme changed from a handler, touch
+targets, a plain field in the dark theme, a router's root without `/`, screens under the top
+one, a broken image, rows a scroll cuts off, right to left); CI runs it on the web, its
+`tests/rtl` with `--locale ar`.
 
 ## The hosts
 
@@ -140,7 +150,7 @@ them.
 | `ui test HOST` in `tests/conformance` | the conformance scene's UI tests (below) |
 | `python3 tests/web/prerender.py [--measure N]` | the prerendered first frame in headless Chrome: content before the module runs (the module blocked), the elements adopted (none made again, a press counts), a different first commit replacing the markup, another route starting empty; with `--measure`, the first contentful paint with and without it |
 | `python3 tests/web/updates.py` | asset updates in headless Chrome against a local update server (`tests/web/updates-app`): a bundle downloaded and used at the next load, a changed file and an added one served by the service worker, a file that does not match its hash and a changed signature refused |
-| `tools/ci_host.sh web\|macos\|linux\|windows\|ios\|android` | what CI runs on a host: the agent check, the conformance tests and the speed budgets (on macOS also a universal, signed release; on Linux a release without the driver; on the web the two Chrome tests above) |
+| `tools/ci_host.sh web\|macos\|linux\|windows\|ios\|android` | what CI runs on a host: the agent check, the conformance tests and the speed budgets (on macOS also a universal, signed release; on Linux a release without the driver; on the web `tests/checks`' UI tests and the two Chrome tests above) |
 
 They drive `tests/harness/app.esk`, which holds every scene a host can be asked for: the
 counter (0), the TODO list (1), a probe (2), the conformance scene (3), the tasks app (4)
