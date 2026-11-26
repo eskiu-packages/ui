@@ -127,14 +127,27 @@ void agent_attach(Project* p, bool real_clock) {
         } else { failing_since = 0; }
         JsonValue_free(answer);
         if (fresh) {
-            // `ui agent --json`: the compiler's warnings for this build, as JSON lines first.
+            // The compiler's warnings for this build, once per build: as JSON lines first under
+            // --json, else as text on standard error (a build that works can still warn: a
+            // `textf` whose arguments do not match its format).
             *JsonValue built_status = agent_serve_status(p);
             string warnings = built_status == null ? null : agent_member(built_status, "warnings");
-            if (ui_json && warnings != null && warnings[0] != 0) {
-                String lines;
-                diag_convert_text(warnings, &lines);
-                print(lines.data == null ? "" : lines.data);
-                String_free(&lines);
+            String key;
+            defer String_free(&key);
+            String_appendf(&key, "%s %s", agent_host, source);
+            if (warnings != null && warnings[0] != 0 && (agent_warned == null || strcmp(agent_warned, key.data) != 0)) {
+                free(agent_warned);
+                agent_warned = ui_copy_text(key.data);
+                if (ui_json) {
+                    String lines;
+                    diag_convert_text(warnings, &lines);
+                    print(lines.data == null ? "" : lines.data);
+                    String_free(&lines);
+                } else {
+                    print_err("ui: the build has warnings:\n");
+                    print_err(warnings);
+                }
+                fflush(null);
             }
             JsonValue_free(built_status);
             return;

@@ -199,8 +199,10 @@ void serve_warnings_of(string output, String* out) {
     bool in_warning = false;
     for (i in 0..lines.size) {
         string line = lines.data[i].data == null ? "" : lines.data[i].data;
+        // A diagnostic's line, or a line of the tool's own ("Built PATH", "ui: ..."), which
+        // ends the warning before it.
         bool diagnostic = strstr(line, ": warning: ") != null || strstr(line, ": error: ") != null
-            || strstr(line, ": note: ") != null || strncmp(line, "ui: ", 4) == 0;
+            || strstr(line, ": note: ") != null || strncmp(line, "ui: ", 4) == 0 || strncmp(line, "Built ", 6) == 0;
         if (diagnostic) { in_warning = strstr(line, ": warning: ") != null; }
         if (in_warning) { String_appendf(out, "%s\n", line); }
     }

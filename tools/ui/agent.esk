@@ -18,6 +18,10 @@ string agent_root;
 // The language the web page takes instead of the browser's (`--locale`), or null.
 string agent_locale;
 
+// The host and sources whose build's warnings were shown (once per build in a `ui test` run),
+// or null.
+string agent_warned;
+
 // The language the web's page is opened with: --locale, else UI_LOCALE, else null (the
 // browser's). Only a language tag's letters, digits and '-' are taken ("ar", "he-IL").
 string agent_web_locale() {
