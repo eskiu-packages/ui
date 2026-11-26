@@ -100,6 +100,7 @@ int main() {
     owned_strings(); printf("PASS owned snapshots\n");
     navigation(); printf("PASS navigation\n");
     navigation_covered(); printf("PASS navigation covered\n");
+    navigation_slash(); printf("PASS navigation slash\n");
     keep_alive(); printf("PASS keep alive\n");
     errors(); printf("PASS error recovery\n");
     driver(); printf("PASS driver\n");

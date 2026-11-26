@@ -7,12 +7,22 @@
 // render the Navigator that shows it again.
 struct Router { List<String> stack; *Signal<int> version; bool synced; string link; }
 
-// A router whose stack holds `root` (null or "": "/"). The caller frees it with
-// Router_free.
+// A route as the router keeps it, into `out`: it starts with '/' ("home" is "/home", null or
+// "" is "/"), as the page's URL does, so the web's URL and the stack name the same route.
+void _ui_route_text(string path, String* out) {
+    String_clear(out);
+    if (path == null || path[0] != '/') { String_append(out, "/"); }
+    if (path != null) { String_append(out, path); }
+}
+
+// A router whose stack holds `root` (null or "": "/"). A route starts with '/': one without
+// ("home") is kept as "/home", so the web's URL, which is the route, matches the stack (a root
+// of "home" next to the page's "/" would put a second screen on top). The caller frees it
+// with Router_free.
 *Router router_new(string root) {
     *Router router = alloc<Router>(1);
     String first;
-    String_from(&first, root == null || root[0] == 0 ? "/" : root);
+    _ui_route_text(root, &first);
     router.stack.push(first);
     router.version = signal_new<int>(0);
     return router;
@@ -97,12 +107,12 @@ void ui_route_history(*Router self, string mode, List<string>* strings) {
 // Pushes `path`, telling the browser's history when `history` (internal).
 void _ui_route_push(*Router self, string path, bool history) {
     String route;
-    String_from(&route, path);
+    _ui_route_text(path, &route);
     self.stack.push(route);
     _ui_route_changed(self);
     if (history) {
         List<string> strings;
-        strings.push(path);
+        strings.push(route.data);
         ui_route_history(self, "push", &strings);
         strings.free();
     }
@@ -112,13 +122,13 @@ void _ui_route_push(*Router self, string path, bool history) {
 // (internal).
 void _ui_route_replace(*Router self, string path, bool history) {
     String route;
-    String_from(&route, path);
+    _ui_route_text(path, &route);
     ui_route_drop(self.stack.data[self.stack.size - 1]);
     self.stack.data[self.stack.size - 1] = route;
     _ui_route_changed(self);
     if (history) {
         List<string> strings;
-        strings.push(path);
+        strings.push(route.data);
         ui_route_history(self, "replace", &strings);
         strings.free();
     }
@@ -131,7 +141,8 @@ void _ui_route_pop(*Router self) {
     _ui_route_changed(self);
 }
 
-// Pushes `path` (copied): its screen slides in on the phone, the URL changes on the web.
+// Pushes `path` (copied, with a '/' first when it has none): its screen slides in on the
+// phone, the URL changes on the web.
 void Router_push(*Router self, string path) { _ui_route_push(self, path, true); }
 
 // Replaces the top route with `path` (copied), with no transition back to it.
@@ -152,7 +163,7 @@ void Router_reset(*Router self, string path) {
     while (self.stack.size > 1) { _ui_route_pop(self); }
     _ui_route_replace(self, path, false);
     List<string> strings;
-    strings.push(path);
+    strings.push(self.stack.data[0].data);
     ui_route_history(self, "reset", &strings);
     strings.free();
 }
@@ -348,7 +359,9 @@ void Navigator(*Router router, escaping fn(string)->void screen UI_LOC) {
                 router.link = ui_copy(link);
                 String route;
                 ui_link_route(link, &route);
-                if (strcmp(route.data, router.stack.data[router.stack.size - 1].data) != 0) {
+                // "/" (the page's own address, the app opened with no route) is the router's
+                // root, whatever it is called.
+                if (strcmp(route.data, "/") != 0 && strcmp(route.data, router.stack.data[router.stack.size - 1].data) != 0) {
                     _ui_route_push(router, route.data, true);
                 }
                 String_free(&route);

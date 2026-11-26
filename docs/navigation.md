@@ -50,6 +50,11 @@ screen must not keep one of those: it would read freed memory.
 `router_new(root)` makes a router with one route, owned by the app's model like
 `signal_new`. It outlives the screens; the app frees it in `ui_app_stop`.
 
+A route starts with `/`, as the URL it is on the web. One given without it (`router_new("home")`,
+`router.push("details")`) is kept with it (`/home`, `/details`), so `router.path()` reads
+`"/home"`; and the page opened at its own address (`/`) is the router's root, whatever the root
+is called, rather than a route pushed over it.
+
 | Call | What it does |
 |---|---|
 | `router.push(route)` | Opens `route` over the current one. |

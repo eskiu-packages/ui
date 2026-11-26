@@ -216,3 +216,29 @@ void keep_alive() {
     String_free(&screens);
     ui_shutdown(); balanced("keep alive leak");
 }
+
+*Router nav_slash_router;
+
+// A route without '/' ("home") is kept as "/home": opened at the page's "/", the router stays
+// at its root instead of putting "/" on top, and a push gets its '/' too.
+void navigation_slash() {
+    Ui runtime;
+    ui_init(&runtime, record);
+    ui_set_link("/");
+    nav_slash_router = router_new("home");
+    ui_mount() {
+        Navigator(nav_slash_router, void(string route) { Text(route); });
+    }
+    ui_frame();
+    check(nav_slash_router.stack.size == 1 && strcmp(nav_slash_router.stack.data[0].data, "/home") == 0,
+        "the root is /home, with nothing on top");
+    nav_slash_router.push("details");
+    ui_frame();
+    check(strcmp(nav_slash_router.path(), "/details") == 0, "a push gets its '/'");
+    nav_slash_router.reset("start");
+    ui_frame();
+    check(nav_slash_router.depth() == 1 && strcmp(nav_slash_router.path(), "/start") == 0, "and a reset");
+    ui_shutdown();
+    nav_slash_router.free();
+    balanced("navigation slash leak");
+}
