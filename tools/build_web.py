@@ -31,8 +31,10 @@ for asset in (HERE / "tests/harness/assets").iterdir():
     shutil.copyfile(asset, BUILD / asset.name)
 # Every example is in this module; an app built by tools/ui carries only its own code.
 # The test module holds every example and the whole kit; an app carries only what it uses.
-# 240 KiB: the C++ exception runtime and the rollback code are about 27 KB of it, and 0.3.0
-# added display frames, motions, gradients and long presses.
-if (BUILD / "app.wasm").stat().st_size > 240 * 1024:
-    raise SystemExit("test wasm budget exceeded (240 KiB)")
+# 256 KiB: the C++ exception runtime and the rollback code are about 27 KB of it; 0.3.0
+# added display frames, motions, gradients and long presses, 0.7 the kit's accessibility,
+# words and themes (about 250 KB with Eskiu 0.16/0.17). This local guard catches a jump; the
+# sizes CI holds every app to are the counter's and the kit gallery's in tools/budgets.toml.
+if (BUILD / "app.wasm").stat().st_size > 256 * 1024:
+    raise SystemExit("test wasm budget exceeded (256 KiB)")
 print("Built:", BUILD, "wasm bytes:", (BUILD / "app.wasm").stat().st_size)
