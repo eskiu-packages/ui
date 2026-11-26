@@ -105,9 +105,20 @@ string uitest_name(*JsonValue node) {
     return null;
 }
 
+// Whether a tree node is a screen a Navigator keeps under its top one (or an inactive
+// KeepAlive): hidden, so what is on it counts only when nothing that shows matches.
+bool uitest_covered(*JsonValue node) {
+    string kind = agent_member(node, "kind");
+    if (kind == null || strcmp(kind, "Screen") != 0) { return false; }
+    *JsonValue props = JsonValue_get(node, "props");
+    *JsonValue active = props == null ? null : JsonValue_get(props, "active");
+    return active != null && active.kind == JNumber && active.num == 0;
+}
+
 // The nodes at and below `node` that `target` names: mode 0 by test_id, 1 by accessible name,
-// 2 by id ("#N").
-void uitest_collect(*JsonValue node, string target, int mode, List<*JsonValue>* found) {
+// 2 by id ("#N"). With `covered` false, the screens under a Navigator's top one are skipped.
+void uitest_collect(*JsonValue node, string target, int mode, bool covered, List<*JsonValue>* found) {
+    if (!covered && uitest_covered(node)) { return; }
     bool hit = false;
     if (mode == 0) { string id = agent_member(node, "test_id"); hit = id != null && strcmp(id, target) == 0; }
     else if (mode == 1) { string name = uitest_name(node); hit = name != null && strcmp(name, target) == 0; }
@@ -117,24 +128,51 @@ void uitest_collect(*JsonValue node, string target, int mode, List<*JsonValue>* 
     if (hit && mode == 1) { return; }
     *JsonValue children = JsonValue_get(node, "children");
     if (children == null) { return; }
-    for (i in 0..JsonValue_len(children)) { uitest_collect(JsonValue_at(children, i), target, mode, found); }
+    for (i in 0..JsonValue_len(children)) { uitest_collect(JsonValue_at(children, i), target, mode, covered, found); }
 }
 
 // The one element `target` names among `nodes` (an array: the root's children, or the
-// layout's frames), by the driver's rule: #N, else a test_id, else an accessible name. Null
+// layout's frames), by the driver's rule: #N, else a test_id, else an accessible name, on
+// what shows first (a screen under the top one counts only when nothing else matches). Null
 // when none or several match, with the reason in `error`.
 *JsonValue uitest_find(*JsonValue nodes, string target, String* error) {
     List<*JsonValue> found;
     defer found.free();
-    for (mode in 0..3) {
-        if ((mode == 2) != (target[0] == '#')) { continue; }
-        for (i in 0..JsonValue_len(nodes)) { uitest_collect(JsonValue_at(nodes, i), target, mode, &found); }
+    for (pass in 0..2) {
+        for (mode in 0..3) {
+            if ((mode == 2) != (target[0] == '#')) { continue; }
+            for (i in 0..JsonValue_len(nodes)) { uitest_collect(JsonValue_at(nodes, i), target, mode, pass == 1, &found); }
+            if (found.size > 0) { break; }
+        }
         if (found.size > 0) { break; }
     }
     if (found.size == 1) { return found.data[0]; }
     if (found.size == 0) { String_appendf(error, "no element with test_id or accessible name '%s'", target); return null; }
     String_appendf(error, "%d elements match '%s' (give one a test_id)", found.size, target);
     return null;
+}
+
+// The id of the element `target` names, found in the tree by uitest_find's rule (a text inside
+// a button named by it is the button), or -1 with the reason in `error`.
+int uitest_target_id(string target, String* error) {
+    *JsonValue answer = uitest_ask("{\"op\": \"tree\"}");
+    if (answer == null) { String_from(error, "the app did not answer tree"); return -1; }
+    defer JsonValue_free(answer);
+    *JsonValue root = JsonValue_get(answer, "root");
+    *JsonValue children = root == null ? null : JsonValue_get(root, "children");
+    if (children == null) { String_appendf(error, "no element with test_id or accessible name '%s'", target); return -1; }
+    *JsonValue node = uitest_find(children, target, error);
+    return node == null ? -1 : (int)agent_number(node, "id");
+}
+
+// The frame of the element `target` names among a layout's `frames`, or null with the reason.
+*JsonValue uitest_frame_of(*JsonValue frames, string target, String* error) {
+    int id = uitest_target_id(target, error);
+    if (id < 0) { return null; }
+    String by_id;
+    defer String_free(&by_id);
+    String_appendf(&by_id, "#%d", id);
+    return uitest_find(frames, by_id.data, error);
 }
 
 // The texts at and below a tree node, in order, a space between each, into `out`.

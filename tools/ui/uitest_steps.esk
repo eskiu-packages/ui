@@ -94,12 +94,12 @@ bool uitest_expect_frame(List<String>* w) {
     *JsonValue frames = JsonValue_get(answer, "frames");
     String error;
     defer String_free(&error);
-    *JsonValue node = uitest_find(frames, target, &error);
+    *JsonValue node = uitest_frame_of(frames, target, &error);
     if (node == null) { return uitest_fail(error.data); }
     double ox = 0;
     double oy = 0;
     if (other != null) {
-        *JsonValue base = uitest_find(frames, other, &error);
+        *JsonValue base = uitest_frame_of(frames, other, &error);
         if (base == null) { return uitest_fail(error.data); }
         ox = agent_number(base, "x");
         oy = agent_number(base, "y");
