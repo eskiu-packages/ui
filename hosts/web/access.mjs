@@ -132,15 +132,27 @@ export function maxLines(node, lines) {
 }
 
 // An image that cannot be loaded draws nothing but its background (no broken icon, no alt
-// text spilling out of its box): its alt text moves to aria-label, which a screen reader
-// still reads, and comes back when a new source loads; `report(id, generation, loaded)` when
-// the app listens (prop 84, node.uiListens).
+// text spilling out of its box): it is marked data-ui-failed, which the renderer's style draws
+// as a transparent picture, and its alt is emptied (a browser draws no icon for alt="") while
+// its words move to aria-label, which a screen reader still reads; both come back when a new
+// source loads. `report(id, generation, loaded)` when the app listens (prop 84,
+// node.uiListens). A prerendered image that failed before the renderer took it is caught too.
 export function watchImage(node, report) {
   const tell = loaded => {
-    if (!loaded && node.alt) { node.setAttribute('aria-label', node.alt); node.uiAlt = node.alt; node.alt = ''; }
-    else if (loaded && node.uiAlt !== undefined) { node.alt = node.uiAlt; node.removeAttribute('aria-label'); node.uiAlt = undefined; }
+    if (!loaded && node.dataset.uiFailed !== '1') {
+      node.uiAlt = node.getAttribute?.('alt') ?? '';
+      if (node.uiAlt) node.setAttribute('aria-label', node.uiAlt);
+      node.setAttribute?.('alt', '');
+      node.dataset.uiFailed = '1';
+    } else if (loaded && node.dataset.uiFailed === '1') {
+      delete node.dataset.uiFailed;
+      if (node.uiAlt) { node.setAttribute('alt', node.uiAlt); node.removeAttribute('aria-label'); }
+      else node.removeAttribute?.('alt');
+      node.uiAlt = undefined;
+    }
     if (node.uiListens) report(Number(node.dataset.uiId), Number(node.dataset.generation), loaded);
   };
   node.addEventListener?.('load', () => tell(true));
   node.addEventListener?.('error', () => tell(false));
+  if (node.complete && node.getAttribute?.('src') && node.naturalWidth === 0) queueMicrotask(() => tell(false));
 }

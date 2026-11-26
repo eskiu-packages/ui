@@ -93,7 +93,9 @@ const SPINNER_CSS = '[data-ui-id] { position: relative; }' +
   '.ui-refresh[data-animating="true"] { display: block; }' +
   '.ui-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, .4); }' +
   '.ui-alert { border: 0; border-radius: 12px; padding: 1rem 1.25rem; min-width: 16rem; font: inherit; }' +
-  '.ui-alert p { margin: .5rem 0 1rem; } .ui-alert div { display: flex; gap: .5rem; justify-content: flex-end; }';
+  '.ui-alert p { margin: .5rem 0 1rem; } .ui-alert div { display: flex; gap: .5rem; justify-content: flex-end; }' +
+  // An image that failed (watchImage) is drawn as a transparent pixel: only its background shows.
+  'img[data-ui-failed] { content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"); }';
 
 // An RGBA color (0: the platform's default) as CSS.
 function cssColor(value) {
@@ -702,7 +704,7 @@ export function createHost(root, dispatch, views = {}) {
         else if (m.op === 9) {
           // String props: 1 label (an image's alt text), 2 placeholder, 3 image source.
           // An image that failed keeps its words in aria-label until a source loads (watchImage).
-          const failed = kindOf(node) === 7 && node.uiAlt !== undefined;
+          const failed = kindOf(node) === 7 && node.dataset.uiFailed === '1';
           if (m.kind === 1 && failed) node.uiAlt = m.text || '';
           const name = m.kind === 1 ? (kindOf(node) === 7 && !failed ? 'alt' : 'aria-label') : m.kind === 2 ? 'placeholder' : 'src';
           if (!m.text) node.removeAttribute(name);
