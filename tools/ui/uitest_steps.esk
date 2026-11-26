@@ -124,6 +124,25 @@ bool uitest_expect_frame(List<String>* w) {
     return uitest_fail(message.data);
 }
 
+// `expect ID visible|hidden`: whether the element shows, as `layout` says (laid out, and some
+// of it inside the window and every scroll or clip above it).
+bool uitest_expect_visible(List<String>* w) {
+    string target = w.data[1].data;
+    bool want = strcmp(w.data[2].data, "visible") == 0;
+    *JsonValue answer = uitest_ask("{\"op\": \"layout\"}");
+    if (answer == null) { return false; }
+    defer JsonValue_free(answer);
+    String error;
+    defer String_free(&error);
+    *JsonValue frame = uitest_frame_of(JsonValue_get(answer, "frames"), target, &error);
+    if (frame == null) { return uitest_fail(error.data); }
+    *JsonValue visible = JsonValue_get(frame, "visible");
+    bool shown = visible != null && visible.boolean != 0;
+    if (shown == want) { return true; }
+    return uitest_fail(want ? "expected it visible, found it hidden (outside the window, a scroll or a clip)"
+                            : "expected it hidden, found it visible");
+}
+
 // `expect state PATH VALUE`: PATH is a member of the state (modals, timers, fetches, frames,
 // clock, now, routes: the stack as "/ > /a") or SCOPE.N, the Nth signal of the scope whose
 // test_id, component name or path (as `ui agent state` prints it) is SCOPE.
@@ -267,7 +286,7 @@ bool uitest_expect(Project* p, string line, string dir) {
     List<String> w;
     defer fs_list_free(&w);
     if (!uitest_words(line, -1, &w)) { return uitest_fail("a quote is not closed"); }
-    if (w.size < 3) { return uitest_fail("expect ID exists|missing|text|prop|frame, expect state PATH VALUE or expect screenshot NAME"); }
+    if (w.size < 3) { return uitest_fail("expect ID exists|missing|text|prop|frame|visible|hidden, expect state PATH VALUE or expect screenshot NAME"); }
     string first = w.data[1].data;
     string what = w.data[2].data;
     if (strcmp(first, "state") == 0) {
@@ -279,11 +298,15 @@ bool uitest_expect(Project* p, string line, string dir) {
         return uitest_expect_screenshot(p, &w, dir);
     }
     if (strcmp(what, "frame") == 0) { return uitest_expect_frame(&w); }
+    if (strcmp(what, "visible") == 0 || strcmp(what, "hidden") == 0) {
+        if (w.size != 3) { return uitest_fail("takes nothing after it"); }
+        return uitest_expect_visible(&w);
+    }
     int need = strcmp(what, "exists") == 0 || strcmp(what, "missing") == 0 ? 3 : strcmp(what, "text") == 0 ? 4
         : strcmp(what, "prop") == 0 ? 5 : 0;
     if (need == 0) {
         String message;
-        String_appendf(&message, "unknown expectation '%s' (exists, missing, text, prop, frame)", what);
+        String_appendf(&message, "unknown expectation '%s' (exists, missing, text, prop, frame, visible, hidden)", what);
         bool ok = uitest_fail(message.data);
         String_free(&message);
         return ok;
