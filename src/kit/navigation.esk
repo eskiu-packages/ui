@@ -12,7 +12,7 @@ void SegmentedControl(string options, int selected, escaping fn(int)->void on_ch
             int index = i;
             bool on = index == selected;
             string name = items.data[i].data;
-            Pressable(Style{grow: 1, padding: 8, min_height: 44, radius: kit.radius - 2, background: on ? kit.surface : -1,
+            Pressable(Style{grow: 1, padding: 8, min_width: 44, min_height: 44, radius: kit.radius - 2, background: on ? kit.surface : -1,
                             align: AlignCenter, justify: JustifyCenter, label: name, role: RoleTab, selected: on},
                 void() { on_change(index); }) {
                 // Both in ink (muted on the track falls under 4.5:1); the raised one is bolder.
@@ -23,7 +23,8 @@ void SegmentedControl(string options, int selected, escaping fn(int)->void on_ch
     }
 }
 
-// Tabs over content the caller shows for `selected`: the selected one underlined.
+// Tabs over content the caller shows for `selected`: the selected one underlined. Each tab is
+// a target at least 44 points wide and tall, its text centered.
 void TabBar(string tabs, int selected, escaping fn(int)->void on_change UI_LOC) {
     KIT_HERE
     ui_own_fn(on_change);
@@ -34,8 +35,9 @@ void TabBar(string tabs, int selected, escaping fn(int)->void on_change UI_LOC) 
             int index = i;
             bool on = index == selected;
             string name = items.data[i].data;
-            Pressable(Style{gap: 6, min_height: 44, justify: JustifyEnd, label: name, role: RoleTab, selected: on}, void() { on_change(index); }) {
-                TextWith(Style{font_size: kit.secondary_size, font_weight: 600, color: on ? kit.primary : kit.muted}, name);
+            Pressable(Style{gap: 6, min_width: 44, min_height: 44, justify: JustifyEnd, label: name, role: RoleTab, selected: on}, void() { on_change(index); }) {
+                TextWith(Style{font_size: kit.secondary_size, font_weight: 600, color: on ? kit.primary : kit.muted,
+                               text_align: TextAlignCenter}, name);
                 Row(Style{height: 2, radius: 1, background: on ? kit.primary : -1}) {}
             }
         }
