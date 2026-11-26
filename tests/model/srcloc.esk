@@ -54,3 +54,31 @@ void source_positions() {
     ui_shutdown();
     balanced("source positions leak");
 }
+
+int sl_timer_token;
+
+int sl_timer_line;
+
+// A timer's error points at its use_timeout call, not at the scope that holds it.
+void timer_position() {
+    Ui runtime;
+    ui_init(&runtime, record);
+    ui_set_timer_host(void(int token, int ms, bool repeat) { sl_timer_token = token; }, void(int token) {});
+    ui_mount() {
+        Scope("Ticker", Key{}) {
+            Text("tick");
+            sl_timer_line = sl_line() + 1;
+            use_timeout(10) {}
+        }
+    }
+    ui_frame();
+    *Node owner = _ui_timer_owner(sl_timer_token);
+    string at = _ui_timer_at(sl_timer_token, owner);
+    String expected;
+    String_format(&expected, "tests/model/srcloc.esk:%d:13", sl_timer_line);
+    check(at != null && strstr(at, expected.data) != null, "the timer's call, its line and column");
+    String_free(&expected);
+    free(at);
+    ui_shutdown();
+    balanced("timer position leak");
+}

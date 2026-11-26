@@ -553,7 +553,7 @@ bool ui_dispatch_event(*Event event) {
         if (owner != null) {
             ui_node_path(owner, &path);
             String_append(&path, " (a timer)");
-            at = _ui_at_text(owner);
+            at = _ui_timer_at(event.id, owner);
         } else if (event.kind != 12 && node != null && node.generation == event.generation) {
             ui_node_path(node, &path);
             at = _ui_at_text(node);

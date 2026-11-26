@@ -107,6 +107,7 @@ int main() {
     reload_keeps_state(); printf("PASS reload keeps state\n");
 #ifdef UI_SRCLOC
     source_positions(); printf("PASS source positions\n");
+    timer_position(); printf("PASS timer position\n");
 #endif
     leak_gate(); printf("PASS leak gates\n");
     return 0;

@@ -3,7 +3,7 @@
 
 // A timer while its scope is mounted. The host keeps the clock (ui_set_timer_host); its
 // tick reaches the handler as an event, so the handler may set signals.
-struct UiTimer { int token; int ms; bool repeat; fn()->void handler; bool armed; bool removed; *Node owner; }
+struct UiTimer { int token; int ms; bool repeat; fn()->void handler; bool armed; bool removed; *Node owner; UiSourceLoc at; }
 
 // The host's side: start(token, ms, repeat) arms a timer, stop(token) disarms it; each tick
 // comes back as ui_event_timer(token). With none set, timers never fire.
@@ -38,11 +38,13 @@ void _ui_drop_timer(*UiTimer timer) {
     }
 }
 
-// The hook behind use_interval and use_timeout (internal).
-void _ui_use_timer(int ms, bool repeat, escaping fn()->void handler) {
+// The hook behind use_interval and use_timeout; `at` is its call, for an error its handler
+// throws (internal).
+void _ui_use_timer(int ms, bool repeat, escaping fn()->void handler, UiSourceLoc at) {
     static int tag;
     *Slot slot = ui_slot(7, &tag);
     *UiTimer timer = (*UiTimer)slot.data;
+    if (timer != null) { timer.at = at; }
     if (timer == null) {
         timer = alloc<UiTimer>(1);
         timer.token = ++ui.next_timer;
@@ -50,6 +52,7 @@ void _ui_use_timer(int ms, bool repeat, escaping fn()->void handler) {
         timer.repeat = repeat;
         // The scope that made it, for an error its handler throws (freed with that scope).
         timer.owner = ui.builder;
+        timer.at = at;
         slot.data = timer;
         ui.timers.push(timer);
         slot.dispose = void() { _ui_drop_timer(timer); ui_release_closure(timer.handler); free(timer); };
@@ -69,10 +72,22 @@ void _ui_use_timer(int ms, bool repeat, escaping fn()->void handler) {
 
 // `handler` every `ms` milliseconds while the scope is mounted; 0 or less pauses it, and a
 // new period restarts it.
-void use_interval(int ms, escaping fn()->void handler) { _ui_use_timer(ms, true, handler); }
+void use_interval(int ms, escaping fn()->void handler UI_LOC) {
+#ifdef UI_SRCLOC
+    _ui_use_timer(ms, true, handler, at);
+#else
+    _ui_use_timer(ms, true, handler, UiSourceLoc{});
+#endif
+}
 
 // `handler` once, `ms` milliseconds after the scope mounts (or after `ms` last changed).
-void use_timeout(int ms, escaping fn()->void handler) { _ui_use_timer(ms, false, handler); }
+void use_timeout(int ms, escaping fn()->void handler UI_LOC) {
+#ifdef UI_SRCLOC
+    _ui_use_timer(ms, false, handler, at);
+#else
+    _ui_use_timer(ms, false, handler, UiSourceLoc{});
+#endif
+}
 
 // The host's side: the timer with `token` fired.
 bool ui_event_timer(int token) { return ui_post(Event{token, 0, 12, 0, null}); }
@@ -87,6 +102,22 @@ bool ui_event_timer(int token) { return ui_post(Event{token, 0, 12, 0, null}); }
         if (timer.token == token && !timer.removed) { return timer.owner; }
     }
     return null;
+}
+
+// "FILE:LINE:COL" for an error the handler of the live timer with `token` threw: its
+// use_interval or use_timeout call when that is in the app's code, else where `owner`, its
+// scope, was made; null without source positions. The caller frees it (internal).
+string _ui_timer_at(int token, *Node owner) {
+#ifdef UI_SRCLOC
+    for (i in 0..ui.timers.size) {
+        *UiTimer timer = ui.timers.data[i];
+        if (timer.token != token || timer.removed || timer.at.file == null || !_ui_source_is_app(timer.at.file)) { continue; }
+        String text;
+        String_appendf(&text, "%s:%d:%d", _ui_source_file(timer.at.file), timer.at.line, timer.at.col);
+        return text.data;
+    }
+#endif
+    return _ui_at_text(owner);
 }
 
 bool _ui_dispatch_timer_event(*Event event) {
