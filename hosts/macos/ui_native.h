@@ -33,7 +33,8 @@ NSWindow *ui_native_window(void);
 // Content that Core Animation shows outside the layer tree (a camera's preview layer, video,
 // Metal) is not in it: a native view with such content can answer this method with what it
 // shows, an image the screenshot draws into the view's frame (stretched to it: give it the
-// view's aspect, cropped as the view shows it), or nil. It is called on the main thread, only
+// view's aspect, cropped as the view shows it) above the view's own layers and below its
+// subviews and what the app draws over it, or nil. It is called on the main thread, only
 // for screenshots.
 @protocol UiNativeSnapshot
 - (NSImage *)uiSnapshot;

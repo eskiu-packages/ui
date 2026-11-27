@@ -284,7 +284,7 @@ static NSRect windowFrame(NSView *view) {
 static bool driverHostRequest(const std::string &request, std::string &answer) {
     if (driverText(request, "op") != "screenshot") return false;
     // The window's layers as Core Animation composes them (a transform included), at the
-    // screen's scale, and over each native view the picture it gives (UiNativeSnapshot).
+    // screen's scale, each native view showing the picture it gives (UiNativeSnapshot).
     std::string file = driverText(request, "file");
     NSView *view = contentView;
     NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
@@ -292,6 +292,34 @@ static bool driverHostRequest(const std::string &request, std::string &answer) {
     [CATransaction flush];
     NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:bitmap];
     CGContextRef cg = context.CGContext;
+    // What a native view shows outside the layer tree (UiNativeSnapshot in ui_native.h): a
+    // layer with its picture, put in the view's layer for this render above the view's own
+    // content and below its subviews, so what the app draws over it stays over it.
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    NSMutableArray<CALayer *> *pictures = [NSMutableArray array];
+    NSMutableArray<NSView *> *pending = [NSMutableArray arrayWithObject:view];
+    while (pending.count) {
+        NSView *next = pending.lastObject;
+        [pending removeLastObject];
+        if (next.hidden) continue;
+        [pending addObjectsFromArray:next.subviews];
+        if (!next.layer || ![next respondsToSelector:@selector(uiSnapshot)]) continue;
+        NSImage *image = [(id<UiNativeSnapshot>)next uiSnapshot];
+        CGImageRef cgImage = image ? [image CGImageForProposedRect:NULL context:nil hints:nil] : NULL;
+        if (!cgImage) continue;
+        CALayer *picture = [CALayer layer];
+        picture.frame = next.layer.bounds;
+        picture.contents = (__bridge id)cgImage;
+        picture.contentsGravity = kCAGravityResize;
+        NSUInteger below = next.layer.sublayers.count;
+        for (NSView *sub in next.subviews) {
+            NSUInteger at = sub.layer ? [next.layer.sublayers indexOfObject:sub.layer] : NSNotFound;
+            if (at != NSNotFound && at < below) below = at;
+        }
+        [next.layer insertSublayer:picture atIndex:(unsigned)below];
+        [pictures addObject:picture];
+    }
     CGContextSaveGState(cg);
     if (view.layer.geometryFlipped) {
         CGContextTranslateCTM(cg, 0, view.bounds.size.height);
@@ -299,23 +327,8 @@ static bool driverHostRequest(const std::string &request, std::string &answer) {
     }
     [view.layer renderInContext:cg];
     CGContextRestoreGState(cg);
-    // What a native view shows outside the layer tree (UiNativeSnapshot in ui_native.h).
-    [NSGraphicsContext saveGraphicsState];
-    NSGraphicsContext.currentContext = context;
-    NSMutableArray<NSView *> *pending = [NSMutableArray arrayWithObject:view];
-    while (pending.count) {
-        NSView *next = pending.lastObject;
-        [pending removeLastObject];
-        if (next.hidden) continue;
-        [pending addObjectsFromArray:next.subviews];
-        if (![next respondsToSelector:@selector(uiSnapshot)]) continue;
-        NSImage *image = [(id<UiNativeSnapshot>)next uiSnapshot];
-        if (!image) continue;
-        NSRect frame = [next convertRect:next.bounds toView:view];
-        if (view.isFlipped) frame.origin.y = view.bounds.size.height - NSMaxY(frame);
-        [image drawInRect:frame fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1];
-    }
-    [NSGraphicsContext restoreGraphicsState];
+    for (CALayer *picture in pictures) [picture removeFromSuperlayer];
+    [CATransaction commit];
     [context flushGraphics];
     // In sRGB, as the app gave its colors, whatever the display's space (Display P3).
     NSBitmapImageRep *srgb = [bitmap bitmapImageRepByConvertingToColorSpace:NSColorSpace.sRGBColorSpace
