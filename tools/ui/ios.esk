@@ -120,6 +120,13 @@ string build_ios(Project* p) {
     if (ui_open) { return build_ios_xcode(p, out, null, null); }
     bool dev = ios_dev();
     ios_reinstall = true;
+    // After a build of another kind the dev executable is linked and installed again.
+    if (build_kind_changed(out) && dev) {
+        String exe_path;
+        defer String_free(&exe_path);
+        String_appendf(&exe_path, "%s.app/%s", p.name.data, p.name.data);
+        fs_remove(join(out, exe_path.data));
+    }
     String sdk;
     String clang;
     // A release is for devices (arm64), a build for this Mac's simulator.

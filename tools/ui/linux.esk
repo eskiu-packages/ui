@@ -314,6 +314,8 @@ string build_linux(Project* p) {
     fs_mkdir_p(out);
     bool dev = linux_dev();
     linux_relaunch = true;
+    // After a build of another kind the dev executable is linked and copied in again.
+    if (build_kind_changed(out) && dev) { fs_remove(join(out, "exe-dev")); }
     // A webview build left its web build there: not this one's.
     fs_remove_all(join(out, "web"));
     string binary = join(out, p.name.data);

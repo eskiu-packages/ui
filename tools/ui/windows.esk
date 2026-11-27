@@ -339,6 +339,8 @@ string build_windows(Project* p) {
     String exe_name;
     String_appendf(&exe_name, "%s.exe", p.name.data);
     string binary = join(out, exe_name.data);
+    // After a build of another kind the dev executable is linked again.
+    if (build_kind_changed(out) && dev) { fs_remove(binary); }
     string app = join(out, ui_release ? "app-release.o" : "app.o");
     Cmd esk;
     esk.add(eskiuc()); esk.add(p.entry()); esk.add("--target"); esk.add("x86_64-w64-windows-gnu");

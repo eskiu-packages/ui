@@ -191,6 +191,14 @@ the new module before `ui_start`.
 `ui serve` looks at the sources every 50 ms and builds once they held still for 50 ms; the
 assets are copied again only when they changed.
 
+`ui build TARGET` (and `ui run TARGET` outside `ui serve`) writes the same
+`build/ui/TARGET/`, with an app that has no driver. Each build records its kind there
+(`build-kind`: `dev`, `test`, `build` or `release`), and a dev build after one of another kind
+links its executable (or Android's library) again and starts the app again, so `ui serve`,
+`ui agent` and `ui test` never drive the app `ui build` left. The reverse holds too: copy the
+app out of `build/ui/TARGET/` (or build it again) after `ui serve`, which replaces it with a
+dev build.
+
 ## macOS
 
 `ui build macos` compiles the app for this Mac (`arm64-apple-macos11.0` or x86_64), compiles

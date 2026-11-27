@@ -91,6 +91,8 @@ string build_android(Project* p) {
     bool use_gradle = ui_release || ui_open || ui_object || maven.size > 0 || kotlin.size > 0 || (gradle != null && strcmp(gradle, "1") == 0);
     bool dev = ios_dev() && !use_gradle;
     android_reinstall = true;
+    // After a build of another kind the dev library is linked and installed again.
+    if (build_kind_changed(out) && dev) { fs_remove(join(join(join(out, "lib"), android_abi()), "libeskiu_ui.so")); }
     android_core = null;
     string sdk = android_sdk();
     string ndk = env_get("ANDROID_NDK_HOME");

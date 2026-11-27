@@ -220,6 +220,29 @@ void built(string target, List<string>* sources) {
     fs_write_text(path.data, stamp_text(target, sources));
 }
 
+// What a build makes in build/ui/TARGET: "dev" (ui serve, UI_DEV=1), "test" (UI_TEST=1),
+// "release" or "build" (ui build, ui run).
+string build_kind() {
+    if (ui_release) { return "release"; }
+    string dev = env_get("UI_DEV");
+    if (dev != null && strcmp(dev, "1") == 0) { return "dev"; }
+    return ui_test_build() ? "test" : "build";
+}
+
+// Records this build's kind in `out` (build-kind) and says whether the last build there was
+// of another kind. A dev build links again only what its stamps say changed, and a `ui build`
+// in between replaced the app without them: the dev build then starts over, or `ui serve`,
+// `ui agent` and `ui test` would run the release app, which has no driver.
+bool build_kind_changed(string out) {
+    string kind = build_kind();
+    string path = join(out, "build-kind");
+    String before;
+    defer String_free(&before);
+    if (fs_read_text(path, &before) == 0 && String_eq_cstr(&before, kind) == 1) { return false; }
+    fs_write_text(path, kind);
+    return true;
+}
+
 // The optimization level for the app's own code: -O0 under `ui serve` (UI_DEV=1), where a
 // build's speed matters more than the app's, -O2 otherwise.
 string app_opt() {

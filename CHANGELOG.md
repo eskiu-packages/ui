@@ -55,6 +55,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `ui test`, `ui agent` and `ui serve` after a `ui build` of the same target drove the app
+  `ui build` left there, which has no driver ("the app does not answer: is it a dev build?"):
+  each build records its kind in `build/ui/TARGET/build-kind`, and a dev build after another
+  kind links and starts the app again (macOS, Linux, Windows, iOS, Android).
 - `ui build` crashed (exit 139, no message) on a ui.toml string value that is empty
   (`[env] CONFIG = ""`): the value is `""` now, and an empty key stops with its line.
 - `kit_set` from a handler reaches the style an app computed from `kit` in a block that reads
