@@ -420,8 +420,36 @@ static CATransform3D transformOf(UiHostNode *node) {
 static bool hasTransform(UiHostNode *node) {
     return node.translateX || node.translateY || node.scalePercent != 100 || node.rotateDegrees;
 }
+// The nodes with a transform. AppKit sets a layer-backed view's layer geometry itself, and the
+// first display after a view joins the window (or its frame changes) puts the identity back,
+// so a run loop observer gives each its transform again after AppKit's display and before Core
+// Animation commits (keepTransforms): rotate, scale and translate show on screen.
+static NSHashTable<UiHostNode *> *transformedNodes(void) {
+    static NSHashTable *nodes;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        nodes = [NSHashTable weakObjectsHashTable];
+        CFRunLoopObserverRef observer = CFRunLoopObserverCreateWithHandler(NULL, kCFRunLoopBeforeWaiting, true, 1999900,
+            ^(CFRunLoopObserverRef, CFRunLoopActivity) {
+                for (UiHostNode *node in nodes.allObjects) {
+                    CALayer *layer = node.view.layer;
+                    if (!layer || !hasTransform(node)) continue;
+                    CATransform3D want = transformOf(node);
+                    if (CATransform3DEqualToTransform(layer.transform, want)) continue;
+                    [CATransaction begin];
+                    [CATransaction setDisableActions:YES];
+                    layer.transform = want;
+                    [CATransaction commit];
+                }
+            });
+        CFRunLoopAddObserver(CFRunLoopGetMain(), observer, kCFRunLoopCommonModes);
+    });
+    return nodes;
+}
 static void applyTransform(UiHostNode *node, bool animate) {
     if (!node.view.layer) return;
+    if (hasTransform(node)) [transformedNodes() addObject:node];
+    else [transformedNodes() removeObject:node];
     NSValue *to = [NSValue valueWithCATransform3D:hasTransform(node) ? transformOf(node) : CATransform3DIdentity];
     if (animate) animateLayer(node, node.view.layer, @"transform", to);
     else {
