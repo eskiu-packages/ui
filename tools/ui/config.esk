@@ -56,7 +56,7 @@
 //   [android.meta_data]
 //   "com.google.ar.core" = "optional"    <meta-data> in the manifest's <application>
 //
-// The values are strings, true and false (kept as "true" and "false") and arrays of strings; a
+// The values are strings ("" included), true and false (kept as "true" and "false") and arrays of strings; a
 // table's keys may also take an inline table of them. The reader knows this subset of TOML and stops at anything else with its line.
 
 // One value: its full key ("ios.frameworks", "ios.spm.FirebaseAuth.url") and its strings.
@@ -87,6 +87,8 @@ void ConfigReader_skip(ConfigReader* self, bool lines) {
 }
 
 void ConfigReader_string(ConfigReader* self, String* out) {
+    // An empty string ("") still has its buffer: a value is never null.
+    String_reserve(out, 1);
     self.at++;
     while (true) {
         char c = self.peek();
@@ -106,7 +108,11 @@ void ConfigReader_string(ConfigReader* self, String* out) {
 
 // A key: bare (letters, digits, _ - .) or quoted.
 void ConfigReader_key(ConfigReader* self, String* out) {
-    if (self.peek() == '"') { self.string(out); return; }
+    if (self.peek() == '"') {
+        self.string(out);
+        if (out.len == 0) { self.fail("expected a key"); }
+        return;
+    }
     while (true) {
         char c = self.peek();
         bool bare = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||

@@ -47,7 +47,7 @@ API_URL = "http://localhost:8080"
 API_URL = "https://api.example.com"
 ```
 
-These are not secrets: they are in the app's binary. Outside a ui build (the model tests)
+A key set to `""` gives `""` (not null). These are not secrets: they are in the app's binary. Outside a ui build (the model tests)
 the version is "0.1.0", the build "1", the name and id empty and every key null.
 
 ## Light and dark

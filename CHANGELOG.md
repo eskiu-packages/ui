@@ -49,6 +49,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `ui build` crashed (exit 139, no message) on a ui.toml string value that is empty
+  (`[env] CONFIG = ""`): the value is `""` now, and an empty key stops with its line.
 - `kit_set` from a handler reaches the style an app computed from `kit` in a block that reads
   no signal (the root's `Column(Style{background: kit.page})`, a row in App): the root follows
   the theme and renders the app again.

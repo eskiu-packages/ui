@@ -107,6 +107,14 @@ printf '[app]\nname = "New app"\n\n[ios]\nframeworks = ["CoreLocation", 3]\n' > 
 if (cd build/newapp && ../ui build web) > build/uitoml.txt 2>&1; then echo "FAIL ui.toml: accepted"; exit 1; fi
 grep -q "ui.toml:5: expected a string in the array" build/uitoml.txt || { cat build/uitoml.txt; exit 1; }
 echo "PASS ui.toml errors"
+# An empty value is a value: ui_config gives "" (it once crashed the tool), an empty key stops.
+printf '[env]\nCONFIG = ""\n' > build/newapp/ui.toml
+(cd build/newapp && ESKIUC="$PWD/../../tests/fake_eskiuc.sh" ../ui build web) > build/uitoml.txt 2>&1 || { cat build/uitoml.txt; exit 1; }
+grep -q 'strcmp(key, "CONFIG") == 0) { return ""; }' build/newapp/build/ui/entry.esk || { echo "FAIL ui.toml: empty value"; exit 1; }
+printf '[env]\n"" = "x"\n' > build/newapp/ui.toml
+if (cd build/newapp && ../ui build web) > build/uitoml.txt 2>&1; then echo "FAIL ui.toml: empty key accepted"; exit 1; fi
+grep -q "ui.toml:2: expected a key" build/uitoml.txt || { cat build/uitoml.txt; exit 1; }
+echo "PASS ui.toml empty values"
 # ui serve builds again on each change and answers the page's wait with the new build, or
 # with a failed build's output. A stand-in compiler (tests/fake_eskiuc.sh) keeps it off emcc.
 rm build/newapp/ui.toml
