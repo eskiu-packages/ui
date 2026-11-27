@@ -292,11 +292,13 @@ static bool driverHostRequest(const std::string &request, std::string &answer) {
     [CATransaction flush];
     NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:bitmap];
     CGContextRef cg = context.CGContext;
+    CGContextSaveGState(cg);
     if (view.layer.geometryFlipped) {
         CGContextTranslateCTM(cg, 0, view.bounds.size.height);
         CGContextScaleCTM(cg, 1, -1);
     }
     [view.layer renderInContext:cg];
+    CGContextRestoreGState(cg);
     // What a native view shows outside the layer tree (UiNativeSnapshot in ui_native.h).
     [NSGraphicsContext saveGraphicsState];
     NSGraphicsContext.currentContext = context;
