@@ -29,6 +29,16 @@ NSWindow *ui_native_window(void);
 }
 #endif
 
+// `ui agent`'s screenshot draws the window's layers itself (no screen recording permission).
+// Content that Core Animation shows outside the layer tree (a camera's preview layer, video,
+// Metal) is not in it: a native view with such content can answer this method with what it
+// shows, an image the screenshot draws into the view's frame (stretched to it: give it the
+// view's aspect, cropped as the view shows it), or nil. It is called on the main thread, only
+// for screenshots.
+@protocol UiNativeSnapshot
+- (NSImage *)uiSnapshot;
+@end
+
 // A function that runs before the app starts, to register views:
 //   UI_NATIVE_SETUP(slider) { ui_register_view(@"slider", ..., ...); }
 #define UI_NATIVE_SETUP(name) __attribute__((constructor)) static void ui_native_setup_##name(void)

@@ -156,9 +156,12 @@ screenshot: shot.png (390x844 pixels)
 The browser's page through its DevTools, `xcrun simctl io booted screenshot` on iOS,
 `adb exec-out screencap -p` on Android. On Windows the host writes its window's client area as
 the compositor has it (`PrintWindow` with `PW_RENDERFULLCONTENT`). On macOS the host draws its window's content into the
-file itself (AppKit's `cacheDisplayInRect:`, converted to sRGB), with no window frame and no
-screen recording permission; it shows each view as the model has it (a transition in flight
-shows its end), and a sheet is not in it. On Linux the host draws its window's content the
+file itself (its layers rendered as Core Animation composes them, transforms included,
+converted to sRGB), with no window frame and no screen recording permission; it shows each
+view as the model has it (a transition in flight shows its end), and a sheet is not in it.
+Content Core Animation shows outside the layer tree (a camera preview, video, Metal) is drawn
+from what its native view gives (`UiNativeSnapshot` in `hosts/macos/ui_native.h`):
+ui-camera's CameraView gives its latest frame; a view that gives nothing shows its background. On Linux the host draws its window's content the
 same way: the widgets under the menu bar, snapshotted and rendered by the window's GSK
 renderer at the window's scale (an alert's dialog, a window of its own, is not in it).
 

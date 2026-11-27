@@ -283,11 +283,38 @@ static NSRect windowFrame(NSView *view) {
 
 static bool driverHostRequest(const std::string &request, std::string &answer) {
     if (driverText(request, "op") != "screenshot") return false;
-    // The window's content as AppKit draws it, at the screen's scale.
+    // The window's layers as Core Animation composes them (a transform included), at the
+    // screen's scale, and over each native view the picture it gives (UiNativeSnapshot).
     std::string file = driverText(request, "file");
     NSView *view = contentView;
     NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
-    [view cacheDisplayInRect:view.bounds toBitmapImageRep:bitmap];
+    [view displayIfNeeded];
+    [CATransaction flush];
+    NSGraphicsContext *context = [NSGraphicsContext graphicsContextWithBitmapImageRep:bitmap];
+    CGContextRef cg = context.CGContext;
+    if (view.layer.geometryFlipped) {
+        CGContextTranslateCTM(cg, 0, view.bounds.size.height);
+        CGContextScaleCTM(cg, 1, -1);
+    }
+    [view.layer renderInContext:cg];
+    // What a native view shows outside the layer tree (UiNativeSnapshot in ui_native.h).
+    [NSGraphicsContext saveGraphicsState];
+    NSGraphicsContext.currentContext = context;
+    NSMutableArray<NSView *> *pending = [NSMutableArray arrayWithObject:view];
+    while (pending.count) {
+        NSView *next = pending.lastObject;
+        [pending removeLastObject];
+        if (next.hidden) continue;
+        [pending addObjectsFromArray:next.subviews];
+        if (![next respondsToSelector:@selector(uiSnapshot)]) continue;
+        NSImage *image = [(id<UiNativeSnapshot>)next uiSnapshot];
+        if (!image) continue;
+        NSRect frame = [next convertRect:next.bounds toView:view];
+        if (view.isFlipped) frame.origin.y = view.bounds.size.height - NSMaxY(frame);
+        [image drawInRect:frame fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1];
+    }
+    [NSGraphicsContext restoreGraphicsState];
+    [context flushGraphics];
     // In sRGB, as the app gave its colors, whatever the display's space (Display P3).
     NSBitmapImageRep *srgb = [bitmap bitmapImageRepByConvertingToColorSpace:NSColorSpace.sRGBColorSpace
                                                             renderingIntent:NSColorRenderingIntentDefault];

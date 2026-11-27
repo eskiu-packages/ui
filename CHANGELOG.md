@@ -34,6 +34,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- macOS: `ui agent`'s screenshot renders the window's layers (`renderInContext:`), so a
+  rotated, scaled or moved view shows as on screen, and draws over a native view the picture
+  it gives through `UiNativeSnapshot` (`hosts/macos/ui_native.h`), as ui-camera's CameraView
+  does with its latest frame (it was black).
 - A route starts with `/`: `router_new("home")`, `push("details")`, `replace` and `reset` keep
   `/home`, `/details`. An app that compared `router.path()` with a route without `/` compares
   it with the `/` now (`route_match` was already indifferent to it).
