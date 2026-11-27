@@ -4,7 +4,7 @@ All notable changes to ui are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.8.0] - 2026-11-26
 
 ### Added
 
@@ -88,7 +88,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   as the app's root (alerts and announcements too), and a prerendered first frame is laid out
   right to left before the module runs.
 
-## [0.7.0] - 2026-11-21
+## [0.7.0]
 
 Needs Eskiu 0.16.2 (it compiles with 0.16.1, but 0.16.2 passes `Style` by pointer, which
 keeps a web app's module about a sixth smaller).
