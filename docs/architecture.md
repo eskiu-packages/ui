@@ -77,7 +77,7 @@ next element's block. Strings passed to elements are copied. See [state](state.m
 | `hosts/web/`, `hosts/ios/`, `hosts/android/`, `hosts/macos/`, `hosts/linux/`, `hosts/windows/` | The hosts |
 | `hosts/macos/webapp.m`, `hosts/linux/webapp.c`, `hosts/windows/webapp.cpp` | The web apps' hosts: windows with the platform's webview, its message channel, the program's URL schemes and dialogs |
 | `js/webapp/` | `@eskiu/webapp`: the page's side of a web app (`bridge.js`, which every web app host runs in the page, and `index.js`, the module) |
-| `tools/ui/` | The `ui` command: `project` (the lock, the packages), `config` (`ui.toml`), `publish` (`ui publish`, the keys), `web`, `macos`, `linux`, `windows`, `yoga`, `ios`, `xcode`, `android`, `gradle`, `new`, `serve` (watch, build in a child, reload), `agent` (`ui agent`, the driver's client), `uitest` (`ui test`), `diagnostics` (`--json`, the compiler's probe), `webapp` (web apps for macOS, Linux and Windows) |
+| `tools/ui/` | The `ui` command: `project` (the lock, the packages), `config` (`ui.toml`), `native_libs` (the `[native.NAME]` libraries: linked, and copied next to the app), `publish` (`ui publish`, the keys), `web`, `macos`, `linux`, `windows`, `yoga`, `ios`, `xcode`, `android`, `gradle`, `new`, `serve` (watch, build in a child, reload), `agent` (`ui agent`, the driver's client), `uitest` (`ui test`), `diagnostics` (`--json`, the compiler's probe), `webapp` (web apps for macOS, Linux and Windows) |
 | `examples/` | Projects: `counter`, `todo`, `tasks`, `kit-gallery`, `native`, `navigation`, `webapp` |
 | `tests/` | The model tests, the host harness and the conformance scene ([testing](testing.md)) |
 
