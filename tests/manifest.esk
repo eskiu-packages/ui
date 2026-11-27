@@ -21,6 +21,7 @@ import <json>;
 import "../tools/ui/common.esk";
 import "../tools/ui/diagnostics.esk";
 import "../tools/ui/config.esk";
+import "../tools/ui/native_libs.esk";
 import "../tools/ui/project.esk";
 import "../tools/ui/png.esk";
 import "../tools/ui/icon.esk";
