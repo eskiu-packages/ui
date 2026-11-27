@@ -55,6 +55,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- macOS: `Style{rotate}`, `scale` and `translate_x`/`translate_y` did not show (AppKit put
+  the identity back on a layer-backed view's layer at its first display): the host gives each
+  transformed view its transform again after AppKit's display, before Core Animation commits.
 - `ui test`, `ui agent` and `ui serve` after a `ui build` of the same target drove the app
   `ui build` left there, which has no driver ("the app does not answer: is it a dev build?"):
   each build records its kind in `build/ui/TARGET/build-kind`, and a dev build after another
