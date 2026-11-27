@@ -4,6 +4,15 @@ All notable changes to ui are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `ui agent`'s screenshot on macOS draws a native view's picture (`UiNativeSnapshot`, a
+  camera's frame) in the view's place among the layers, so the views the app draws over it
+  (an overlay, a badge on the video) show in the screenshot as in the window. It was drawn
+  after every layer, over them.
+
 ## [0.8.0] - 2026-11-26
 
 ### Added
