@@ -30,6 +30,7 @@ import <base64>;
 import "common.esk";
 import "diagnostics.esk";
 import "config.esk";
+import "native_libs.esk";
 import "project.esk";
 import "png.esk";
 import "icon.esk";

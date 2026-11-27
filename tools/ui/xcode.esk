@@ -152,6 +152,7 @@ string build_ios_xcode(Project* p, string out, string app_object, List<String>* 
         for (i in 0..yoga.size) { String_appendf(&list, "%s\n", yoga.data[i].data); }
         fs_write_text(join(listed, "objects.txt"), list.data);
         String_free(&list);
+        ios_dylibs_list(p, ui_release ? "ios-arm64" : ios_simulator_platform(), listed);
     }
     String_append(&flags, ", \"-framework\", UIKit, \"-framework\", Foundation, \"-framework\", CoreGraphics, \"-framework\", QuartzCore, \"-framework\", CoreText");
     List<string> frameworks;
@@ -352,7 +353,24 @@ string ios_object_step(Project* p, string out) {
     String_appendf(&list, "%s\n", app);
     for (i in 0..objects.size) { String_appendf(&list, "%s\n", objects.data[i].data); }
     fs_write_text(join(dir, "objects.txt"), list.data);
+    ios_dylibs_list(p, device ? "ios-arm64" : (strcmp(arch, "arm64") == 0 ? "ios-arm64-simulator" : "ios-x86_64-simulator"), dir);
     return app;
+}
+
+// lib/PLATFORM/dylibs.txt: each dynamic library from [native.NAME] the link takes (from
+// objects.txt), as "INSTALL_NAME PATH" lines, which the assets phase copies into the app's
+// Frameworks and signs with the build's identity (native_libs.esk).
+void ios_dylibs_list(Project* p, string platform, string dir) {
+    List<NativeLib> libs;
+    defer native_libs_free(&libs);
+    p.native_libs(platform, &libs);
+    String list;
+    defer String_free(&list);
+    String_from(&list, "");
+    for (i in 0..libs.size) {
+        if (libs.data[i].shared) { String_appendf(&list, "%s %s\n", libs.data[i].install.data, libs.data[i].file.data); }
+    }
+    fs_write_text(join(dir, "dylibs.txt"), list.data);
 }
 
 // The XCRemoteSwiftPackageReference ids, for the project's packageReferences.
@@ -384,6 +402,11 @@ string ios_assets_script(Project* p, string assets, string catalog) {
     String script;
     String_appendf(&script, "if [ -d '%s' ]; then cp -R '%s'/ \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/\"; fi\n",
         assets, assets);
+    // The dynamic libraries of lib/PLATFORM/dylibs.txt (ios_dylibs_list), signed as the app is.
+    String_append(&script, "dylibs=\"$PROJECT_DIR/lib/$PLATFORM_NAME/dylibs.txt\"\n"
+        "if [ -s \"$dylibs\" ]; then\n  into=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\n  mkdir -p \"$into\"\n"
+        "  while read -r name path; do\n    [ -n \"$name\" ] || continue\n    cp -f \"$path\" \"$into/$name\"\n"
+        "    codesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \"$into/$name\"\n  done < \"$dylibs\"\nfi\n");
     string splash = splash_image(p);
     if (splash != null) {
         String_appendf(&script, "cp '%s' \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/ui-splash.png\"\n", splash);

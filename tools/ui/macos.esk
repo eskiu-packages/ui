@@ -72,6 +72,37 @@ void macos_frameworks(Project* p, Cmd* link) {
     for (i in 0..frameworks.size) { link.add("-framework"); link.add(frameworks.data[i]); }
 }
 
+// The rpath to Contents/Frameworks, where a dynamic library from [native.NAME] goes
+// (native_libs.esk), when the libraries for `platform` have one; a library nothing calls is
+// not loaded.
+void macos_rpath(Project* p, string platform, Cmd* link) {
+    List<NativeLib> libs;
+    defer native_libs_free(&libs);
+    p.native_libs(platform, &libs);
+    if (native_any_shared(&libs)) {
+        link.add("-Wl,-rpath,@executable_path/../Frameworks"); link.add("-Wl,-dead_strip_dylibs");
+    }
+}
+
+// The dynamic libraries from [native.NAME] that `binaries` load into Contents/Frameworks: one
+// universal file each when the build has both architectures.
+void macos_embed(Project* p, string contents, List<string>* archs, List<string>* binaries) {
+    List<NativeLib> first;
+    defer native_libs_free(&first);
+    List<NativeLib> second;
+    defer native_libs_free(&second);
+    String platform;
+    defer String_free(&platform);
+    String_appendf(&platform, "macos-%s", archs.data[0]);
+    p.native_libs(platform.data, &first);
+    if (archs.size > 1) {
+        String_clear(&platform);
+        String_appendf(&platform, "macos-%s", archs.data[1]);
+        p.native_libs(platform.data, &second);
+    }
+    native_embed_apple(&first, archs.size > 1 ? &second : null, binaries, join(contents, "Frameworks"), "-");
+}
+
 // The app's executable for one architecture: the host, the native code, Yoga and (but in a
 // dev build, which loads it from a bundle) the app. Its path, or null when a dev build's
 // executable is as it was.
@@ -152,6 +183,7 @@ string macos_executable(Project* p, string out, string arch, bool dev, List<stri
     for (i in 0..native_objects.size) { link.add(native_objects.data[i].data); }
     for (i in 0..objects.size) { link.add(objects.data[i].data); }
     macos_frameworks(p, &link);
+    macos_rpath(p, platform.data, &link);
     link.add("-o"); link.add(executable);
     link.must(null);
     link.free();
@@ -160,9 +192,10 @@ string macos_executable(Project* p, string out, string arch, bool dev, List<stri
 }
 
 // A dev build's app code: a bundle linked against the executable, named afresh each time
-// (dlopen keeps a path it loaded), and its path in the reload file the running app polls.
+// (dlopen keeps a path it loaded), the dynamic libraries both load in Contents/Frameworks, and
+// the bundle's path in the reload file the running app polls.
 // The older ones go, but for the one the app runs.
-void macos_core(Project* p, string out, string app, string executable, List<string>* compiler) {
+void macos_core(Project* p, string out, string app, string executable, List<string>* compiler, string contents, List<string>* archs) {
     string reload = join(out, "reload");
     fs_mkdir_p(reload);
     List<String> old;
@@ -188,9 +221,15 @@ void macos_core(Project* p, string out, string app, string executable, List<stri
     p.native_archives(platform.data, &archives);
     for (i in 0..archives.size) { link.add(archives.data[i].data); }
     macos_frameworks(p, &link);
+    macos_rpath(p, platform.data, &link);
     link.add("-o"); link.add(library);
     link.must(null);
     link.free();
+    // The dynamic libraries it and the executable load are in place before the app takes it.
+    List<string> loaders;
+    defer loaders.free();
+    loaders.push(executable); loaders.push(library);
+    macos_embed(p, contents, archs, &loaders);
     fs_write_text(macos_reload_file(p), library);
 }
 
@@ -329,7 +368,7 @@ string build_macos(Project* p) {
             }
             macos_bundle(p, contents, resources, false);
             p.copy_assets(resources);
-            macos_core(p, out, app, executable, &compiler);
+            macos_core(p, out, app, executable, &compiler, contents, &archs);
             return bundle;
         }
         String path;
@@ -347,6 +386,10 @@ string build_macos(Project* p) {
     }
     macos_bundle(p, contents, resources, false);
     p.copy_assets(resources);
+    List<string> loaders;
+    defer loaders.free();
+    loaders.push(executable);
+    macos_embed(p, contents, &archs, &loaders);
     Cmd sign;
     sign.add("codesign"); sign.add("--force"); sign.add("--sign"); sign.add("-"); sign.add(bundle);
     sign.must(null);

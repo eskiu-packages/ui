@@ -171,6 +171,12 @@ string build_android(Project* p) {
     esk.free();
     string libs = join(join(out, "lib"), android_abi());
     fs_mkdir_p(libs);
+    // A [native.NAME] with only libNAME.so: linked, and packed next to libeskiu_ui.so, where
+    // the app's linker namespace finds it (native_libs.esk).
+    List<NativeLib> shared;
+    defer native_libs_free(&shared);
+    p.native_libs(android_x86() ? "android-x86_64" : "android-arm64", &shared);
+    native_copy_shared(&shared, libs, "android");
     // The host's library: with the app's code in it, or (a reload build) without, linked again
     // only when its parts changed, and then the app's code in a library of its own that finds
     // the host's functions in it.

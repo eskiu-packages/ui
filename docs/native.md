@@ -456,7 +456,38 @@ If a package in `eskiu.lock` also declares prebuilt native archives in its `eski
 `windows-x86_64`, as [`eskiu-packages/gpu`](https://github.com/eskiu-packages/gpu) does for
 `wgpu_native`), `ui build ios`, `ui build android`, `ui build macos`, `ui build linux` and
 `ui build windows` download the archive into
-`~/.eskiu/native/` when missing and link its `libNAME.a` into the app bundle automatically.
+`~/.eskiu/native/` when missing and link it into the app automatically: its `libNAME.a` when
+the `lib` directory has one (as before), else its dynamic library, which the build then
+puts where the app finds it at run time (`tools/ui/native_libs.esk`):
+
+| Target | Linked | Goes to | Found by |
+|---|---|---|---|
+| macOS | `libNAME.dylib` | `NAME.app/Contents/Frameworks/` (one universal file in a release with both architectures) | rpath `@executable_path/../Frameworks` |
+| iOS | `libNAME.dylib` | `NAME.app/Frameworks/`, signed with the app's identity | rpath `@executable_path/Frameworks` |
+| Linux | `libNAME.so` | next to the binary, with its versioned names (`libNAME.so.1`...) as the archive has them | rpath `$ORIGIN` |
+| Android | `libNAME.so` | `lib/ABI/` (the APK's jniLibs), next to `libeskiu_ui.so` | the app's library path |
+| Windows | `libNAME.dll.a`, `NAME.lib` or `NAME.dll` | every `.dll` of the `lib` directory next to `NAME.exe` | the executable's directory |
+
+So a package such as [`eskiu-packages/onnx`](https://github.com/eskiu-packages/onnx), whose
+ONNX Runtime archives ship only `libonnxruntime.dylib` (`.so`, `.dll`), works in a ui app with
+no flags in ui.toml: `ui build macos` links it and the app opens on a Mac that never fetched
+the archive. On macOS and iOS the library is copied under the install name the executable
+records (`@rpath/libonnxruntime.1.dylib`); one whose install name is not an `@rpath/` one is
+given `@rpath/FILE` first, as `eskiuc fetch` does. The link passes `-dead_strip_dylibs`, so a
+dependency's library the app never calls is neither loaded nor copied. A library built for a
+newer macOS than the app's minimum (11.0) links with a warning and needs that macOS to run
+(ONNX Runtime 1.31 needs macOS 14). Notes per target:
+
+- The `ui serve` builds (macOS, Linux, Windows) do the same, so the dev app and a release load
+  the same file.
+- Android packs only `lib*.so` names, so the library's SONAME must be `libNAME.so`; a
+  versioned one (`libNAME.so.1`) is not found on the device.
+- iOS: a bare dylib is fine for the simulator and for development; the App Store wants
+  libraries inside frameworks, so a package for the store ships `libNAME.a` (or an
+  XCFramework the app adds in Xcode). The Xcode path (`ui release ios`, `ui open ios`) lists
+  the libraries in `lib/PLATFORM/dylibs.txt` and its assets phase copies and signs them.
+- The macOS path is the one run against ONNX Runtime so far; the iOS, Android, Linux and
+  Windows paths follow the same rules but have not been run against a dynamic-only archive.
 
 ## Hooks in a package
 

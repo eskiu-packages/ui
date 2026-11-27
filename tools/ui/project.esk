@@ -299,10 +299,12 @@ void toml_inline_value(String* line, string key, String* out) {
     }
 }
 
-// The prebuilt static archives (`libNAME.a`) from `[native.NAME]` in every package's
-// eskiu.toml for `platform` ("ios-arm64", "ios-arm64-simulator", "ios-x86_64-simulator",
-// "android-arm64", "macos-arm64", "macos-x86_64"), downloaded and unpacked into $ESKIU_HOME/native/SHA256 when missing.
-void Project_native_archives(Project* self, string platform, List<String>* out) {
+// The prebuilt libraries from `[native.NAME]` in every package's eskiu.toml for `platform`
+// ("ios-arm64", "ios-arm64-simulator", "ios-x86_64-simulator", "android-arm64",
+// "macos-arm64", "macos-x86_64", "linux-x86_64", "windows-x86_64"...), downloaded and
+// unpacked into $ESKIU_HOME/native/SHA256 when missing: each one's static archive when its
+// directory has one, else its dynamic library (native_libs.esk).
+void Project_native_libs(Project* self, string platform, List<NativeLib>* out) {
     for (i in 0..self.roots.size) {
         string toml = join(self.roots.data[i].data, "eskiu.toml");
         if (fs_exists(toml) != 1) { continue; }
@@ -344,10 +346,8 @@ void Project_native_archives(Project* self, string platform, List<String>* out) 
                 string lib_dir = join(dir, sub.data);
                 // Downloaded once into the cache eskiuc shares, checked against its sha256.
                 if (fs_is_dir(lib_dir) != 1) { fetch_archive(lib_name.data, url.data, sha256.data, dir); }
-                String archive;
-                String_appendf(&archive, "%s/lib%s.a", lib_dir, lib_name.data);
-                if (fs_exists(archive.data) == 1) { out.push(archive); }
-                else { String_free(&archive); }
+                NativeLib lib;
+                if (native_lib_find(lib_name.data, lib_dir, platform, &lib)) { out.push(lib); }
             }
             String_free(&url);
             String_free(&sha256);
@@ -357,6 +357,19 @@ void Project_native_archives(Project* self, string platform, List<String>* out) 
         fs_list_free(&lines);
         String_free(&text);
     }
+}
+
+// What the link takes from them: each library's file (an archive, or a dynamic library or its
+// import library, native_libs.esk).
+void Project_native_archives(Project* self, string platform, List<String>* out) {
+    List<NativeLib> libs;
+    self.native_libs(platform, &libs);
+    for (i in 0..libs.size) {
+        String file;
+        String_from(&file, libs.data[i].file.data);
+        out.push(file);
+    }
+    native_libs_free(&libs);
 }
 
 // The driver's port of a desktop dev app of the project at `root` (UI_AGENT_PORT when set):

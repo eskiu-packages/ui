@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `ui build` links a `[native.NAME]` library that ships only a dynamic library
+  (`libNAME.dylib`, `.so`, a DLL with its import library), as ONNX Runtime's archives do, and
+  puts it where the app finds it: macOS `Contents/Frameworks` (rpath
+  `@executable_path/../Frameworks`), iOS `Frameworks` (signed), Linux next to the binary
+  (`$ORIGIN`), Android `lib/ABI`, Windows next to the `.exe`. A `libNAME.a` is still preferred
+  ([native](docs/native.md#packages)).
 - `ui_field_color`: the background of a TextInput with neither a color nor a background of its
   own while `ui_text_color` sets its text; `kit_set` and `kit_follow_system` set it to the
   theme's `surface`.

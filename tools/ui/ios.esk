@@ -55,6 +55,22 @@ bool ios_dev() {
 // The file the dev host polls: it holds the newest dylib's path.
 string ios_reload_file(Project* p) { return join(p.out("ios"), "reload/current"); }
 
+// The [native] libraries' platform for this Mac's simulator.
+string ios_simulator_platform() {
+    return strcmp(ios_arch(), "arm64") == 0 ? "ios-arm64-simulator" : "ios-x86_64-simulator";
+}
+
+// The rpath to the bundle's Frameworks, where a dynamic library from [native.NAME] goes
+// (native_libs.esk), when the simulator's libraries have one; one nothing calls is not loaded.
+void ios_rpath(Project* p, Cmd* link) {
+    List<NativeLib> libs;
+    defer native_libs_free(&libs);
+    p.native_libs(ios_simulator_platform(), &libs);
+    if (native_any_shared(&libs)) {
+        link.add("-Wl,-rpath,@executable_path/Frameworks"); link.add("-Wl,-dead_strip_dylibs");
+    }
+}
+
 // A dev build's app code: a bundle linked against the executable (which exports the host's
 // functions), named afresh each time since dlopen keeps a path it loaded, and its path in the
 // reload file the running app polls. The previous ones go, but for the one the app runs.
@@ -89,6 +105,7 @@ void ios_core(Project* p, string out, string app, string executable, List<string
     defer frameworks.free();
     p.config.all("ios.frameworks", &frameworks);
     for (i in 0..frameworks.size) { link.add("-framework"); link.add(frameworks.data[i]); }
+    ios_rpath(p, &link);
     link.add("-o"); link.add(library);
     link.must(null);
     link.free();
@@ -276,9 +293,18 @@ string build_ios(Project* p) {
         link.add("-Xlinker"); link.add("-sectcreate"); link.add("-Xlinker"); link.add("__TEXT");
         link.add("-Xlinker"); link.add("__entitlements"); link.add("-Xlinker"); link.add(path);
     }
+    ios_rpath(p, &link);
     link.add("-o"); link.add(executable);
     link.must(null);
     link.free();
+    // The dynamic libraries from [native.NAME] the executable loads, signed into Frameworks.
+    List<NativeLib> shared;
+    defer native_libs_free(&shared);
+    p.native_libs(ios_simulator_platform(), &shared);
+    List<string> loaders;
+    defer loaders.free();
+    loaders.push(executable);
+    native_embed_apple(&shared, null, &loaders, join(bundle, "Frameworks"), "-");
     Cmd sign;
     sign.add("codesign"); sign.add("--force"); sign.add("--sign"); sign.add("-");
     sign.add(bundle);

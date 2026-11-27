@@ -322,8 +322,8 @@ void windows_core(Project* p, string out, string app, string cxx) {
     fs_write_text(windows_reload_file(p), library);
 }
 
-// The Win32 app: build/ui/windows/NAME.exe with assets/, icon.ico and window.txt (ui.toml
-// [windows] window) next to it. A dev build (UI_DEV=1) puts the app's code in a DLL the
+// The Win32 app: build/ui/windows/NAME.exe with assets/, icon.ico, window.txt (ui.toml
+// [windows] window) and the DLLs of the [native] libraries next to it. A dev build (UI_DEV=1) puts the app's code in a DLL the
 // running app loads, so the executable is linked again only when the host or the native code
 // changed.
 string build_windows(Project* p) {
@@ -354,6 +354,12 @@ string build_windows(Project* p) {
     string window = p.config.string("windows.window");
     string window_file = join(out, "window.txt");
     if (window != null) { fs_write_text(window_file, window); } else { fs_remove(window_file); }
+    // The DLLs of a [native.NAME] linked through its import library (or the DLL itself) next
+    // to NAME.exe, where Windows looks first (native_libs.esk).
+    List<NativeLib> shared;
+    defer native_libs_free(&shared);
+    p.native_libs("windows-x86_64", &shared);
+    native_copy_shared(&shared, out, "windows");
     if (dev) { windows_core(p, out, app, cxx); }
     return binary;
 }

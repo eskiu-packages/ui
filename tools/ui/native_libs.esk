@@ -1,0 +1,216 @@
+// The prebuilt libraries of `[native.NAME]` (a package's eskiu.toml): what a build links from
+// each one's directory, and the dynamic libraries it puts next to the app so it finds them
+// where it runs (docs/native.md). Part of the ui tool (tools/ui/main.esk imports every part).
+//
+// A directory with a static archive (libNAME.a) gives it to the link, as before. Without one
+// the dynamic library is linked and goes with the app:
+//
+//   macOS    libNAME.dylib   into NAME.app/Contents/Frameworks, rpath @executable_path/../Frameworks
+//   iOS      libNAME.dylib   into NAME.app/Frameworks, rpath @executable_path/Frameworks
+//   Linux    libNAME.so      next to the binary (its versioned names too), rpath $ORIGIN
+//   Android  libNAME.so      into lib/ABI (the APK's jniLibs)
+//   Windows  libNAME.dll.a, NAME.lib or NAME.dll   the directory's DLLs next to NAME.exe
+//
+// On macOS and iOS a library keeps the install name the link recorded (@rpath/NAME): one
+// that has another gets @rpath/its file's name first, as eskiuc does when it fetches one.
+
+// One library: its name, its directory, the file the link takes, whether it is dynamic, and
+// (Apple) the name the executable looks it up by under its rpath.
+struct NativeLib { String name; String dir; String file; bool shared; String install; }
+
+void native_libs_free(List<NativeLib>* libs) {
+    for (i in 0..libs.size) {
+        String_free(&libs.data[i].name); String_free(&libs.data[i].dir);
+        String_free(&libs.data[i].file); String_free(&libs.data[i].install);
+    }
+    libs.free();
+}
+
+// `dir/file_name` as `out` when it exists.
+bool native_lib_try(NativeLib* out, string name, string dir, string file_name, bool shared) {
+    string file = join(dir, file_name);
+    if (fs_exists(file) != 1) { return false; }
+    String_from(&out.name, name);
+    String_from(&out.dir, dir);
+    String_from(&out.file, file);
+    out.shared = shared;
+    return true;
+}
+
+// The install name of a dynamic library (`otool -D`), or "".
+void apple_install_name(string file, String* out) {
+    Cmd otool;
+    otool.add("otool"); otool.add("-D"); otool.add(file);
+    String text;
+    defer String_free(&text);
+    bool ok = otool.output(&text);
+    otool.free();
+    if (!ok) { return; }
+    List<String> lines;
+    defer fs_list_free(&lines);
+    String_lines(&text, &lines);
+    if (lines.size < 2) { return; }
+    String_trim(&lines.data[lines.size - 1]);
+    String_from(out, lines.data[lines.size - 1].data);
+}
+
+// The name an Apple dynamic library is found by under the app's rpath, its install name made
+// @rpath/FILE first when it is not an @rpath one (an absolute path works only on the Mac that
+// built it).
+void apple_rpath_name(NativeLib* lib) {
+    String id;
+    defer String_free(&id);
+    apple_install_name(lib.file.data, &id);
+    if (id.data == null || String_starts_with(&id, "@rpath/") != 1) {
+        String base;
+        defer String_free(&base);
+        path_basename(&base, lib.file.data);
+        String_clear(&id);
+        String_appendf(&id, "@rpath/%s", base.data);
+        Cmd fix;
+        fix.add("install_name_tool"); fix.add("-id"); fix.add(id.data); fix.add(lib.file.data);
+        fix.must(null);
+        fix.free();
+        Cmd sign;
+        sign.add("codesign"); sign.add("--force"); sign.add("--sign"); sign.add("-"); sign.add(lib.file.data);
+        sign.run(null);
+        sign.free();
+    }
+    String_from(&lib.install, id.data + 7);
+}
+
+// The library NAME in `dir` for `platform`: its static archive when there is one, else its
+// dynamic library (or on Windows its import library). False when the directory has neither.
+bool native_lib_find(string name, string dir, string platform, NativeLib* out) {
+    String file;
+    defer String_free(&file);
+    String_appendf(&file, "lib%s.a", name);
+    if (native_lib_try(out, name, dir, file.data, false)) { return true; }
+    bool apple = strncmp(platform, "macos-", 6) == 0 || strncmp(platform, "ios-", 4) == 0;
+    if (strncmp(platform, "windows-", 8) == 0) {
+        List<String> dlls;
+        defer fs_list_free(&dlls);
+        fs_glob(join(dir, "*.dll"), &dlls);
+        bool shared = dlls.size > 0;
+        String_clear(&file); String_appendf(&file, "lib%s.dll.a", name);
+        if (native_lib_try(out, name, dir, file.data, shared)) { return true; }
+        String_clear(&file); String_appendf(&file, "%s.lib", name);
+        if (native_lib_try(out, name, dir, file.data, shared)) { return true; }
+        String_clear(&file); String_appendf(&file, "%s.dll", name);
+        if (native_lib_try(out, name, dir, file.data, true)) { return true; }
+        String_clear(&file); String_appendf(&file, "lib%s.dll", name);
+        return native_lib_try(out, name, dir, file.data, true);
+    }
+    String_clear(&file);
+    String_appendf(&file, apple ? "lib%s.dylib" : "lib%s.so", name);
+    if (!native_lib_try(out, name, dir, file.data, true)) { return false; }
+    if (apple) { apple_rpath_name(out); }
+    return true;
+}
+
+// Any dynamic library in `libs`.
+bool native_any_shared(List<NativeLib>* libs) {
+    for (i in 0..libs.size) { if (libs.data[i].shared) { return true; } }
+    return false;
+}
+
+// The libraries `binaries` load (`otool -L` of each), one per line.
+void apple_loads(List<string>* binaries, String* out) {
+    for (i in 0..binaries.size) {
+        Cmd otool;
+        otool.add("otool"); otool.add("-L"); otool.add(binaries.data[i]);
+        String text;
+        if (otool.output(&text)) { String_append(out, text.data); String_append(out, "\n"); }
+        String_free(&text);
+        otool.free();
+    }
+}
+
+// The dynamic libraries of `first` that `binaries` load (the link drops the others with
+// -dead_strip_dylibs, so a package's library the app does not call stays out) into `dir`
+// (Contents/Frameworks, or an iOS bundle's Frameworks) under their install names, signed with
+// `identity` ("-": ad hoc). `second`, the other architecture's of a universal build (or null),
+// is joined with each by lipo.
+void native_embed_apple(List<NativeLib>* first, List<NativeLib>* second, List<string>* binaries, string dir, string identity) {
+    if (!native_any_shared(first)) { return; }
+    String loads;
+    defer String_free(&loads);
+    apple_loads(binaries, &loads);
+    for (i in 0..first.size) {
+        NativeLib* lib = &first.data[i];
+        if (!lib.shared) { continue; }
+        String needle;
+        String_appendf(&needle, "@rpath/%s ", lib.install.data);
+        bool used = loads.data != null && String_contains(&loads, needle.data) == 1;
+        String_free(&needle);
+        if (!used) {
+            fs_remove(join(dir, lib.install.data));
+            continue;
+        }
+        fs_mkdir_p(dir);
+        string to = join(dir, lib.install.data);
+        string other = null;
+        if (second != null) {
+            for (j in 0..second.size) {
+                if (second.data[j].shared && String_eq(&second.data[j].name, &lib.name) == 1) { other = second.data[j].file.data; }
+            }
+        }
+        bool fresh = !newer(lib.file.data, to) && (other == null || !newer(other, to));
+        if (fresh) { continue; }
+        if (other != null && strcmp(other, lib.file.data) != 0) {
+            Cmd lipo;
+            lipo.add("lipo"); lipo.add("-create"); lipo.add(lib.file.data); lipo.add(other); lipo.add("-output"); lipo.add(to);
+            lipo.must(null);
+            lipo.free();
+        } else {
+            fs_remove(to);
+            if (fs_copy(lib.file.data, to) != 0) {
+                String message;
+                String_appendf(&message, "ui: could not copy %s into %s", lib.file.data, dir);
+                fail(message.data);
+            }
+        }
+        Cmd sign;
+        sign.add("codesign"); sign.add("--force"); sign.add("--sign"); sign.add(identity); sign.add(to);
+        sign.must(null);
+        sign.free();
+    }
+}
+
+// The dynamic libraries of `libs` into `dir`, as `kind` ("linux", "android", "windows") finds
+// them: Linux each libNAME.so* (the versioned name the binary records, symbolic links kept),
+// Android libNAME.so (the APK packs only those), Windows every DLL of the library's directory.
+void native_copy_shared(List<NativeLib>* libs, string dir, string kind) {
+    for (i in 0..libs.size) {
+        NativeLib* lib = &libs.data[i];
+        if (!lib.shared) { continue; }
+        fs_mkdir_p(dir);
+        List<String> files;
+        String pattern;
+        if (strcmp(kind, "windows") == 0) { String_from(&pattern, "*.dll"); }
+        else if (strcmp(kind, "android") == 0) { String_appendf(&pattern, "lib%s.so", lib.name.data); }
+        else { String_appendf(&pattern, "lib%s.so*", lib.name.data); }
+        fs_glob(join(lib.dir.data, pattern.data), &files);
+        String_free(&pattern);
+        for (j in 0..files.size) {
+            String base;
+            path_basename(&base, files.data[j].data);
+            string to = join(dir, base.data);
+            String_free(&base);
+            if (!newer(files.data[j].data, to)) { continue; }
+            fs_remove(to);
+            if (strcmp(kind, "linux") == 0) {
+                // cp -P keeps a link a link: libNAME.so -> libNAME.so.1 -> libNAME.so.1.2.3.
+                Cmd cp;
+                cp.add("cp"); cp.add("-P"); cp.add(files.data[j].data); cp.add(to);
+                cp.must(null);
+                cp.free();
+            } else if (fs_copy(files.data[j].data, to) != 0) {
+                String message;
+                String_appendf(&message, "ui: could not copy %s into %s", files.data[j].data, dir);
+                fail(message.data);
+            }
+        }
+        fs_list_free(&files);
+    }
+}

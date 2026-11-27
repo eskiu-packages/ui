@@ -191,6 +191,11 @@ string linux_executable(Project* p, string out, bool dev, string app) {
     link.add("-lm"); link.add("-lpthread");
 #ifndef __APPLE__
     link.add("-ldl");
+    // A dynamic library from [native.NAME] goes next to the binary (native_libs.esk).
+    List<NativeLib> shared;
+    defer native_libs_free(&shared);
+    p.native_libs(platform.data, &shared);
+    if (native_any_shared(&shared)) { link.add("-Wl,-rpath,$ORIGIN"); }
 #endif
     link.add("-o"); link.add(executable);
     link.must(null);
@@ -327,6 +332,16 @@ string build_linux(Project* p) {
     string icon = app_icon(p);
     if (icon != null) { fs_copy(icon, join(out, "icon.png")); }
     if (dev) { linux_core(p, out, app, binary); }
+#ifndef __APPLE__
+    // The dynamic libraries from [native.NAME] next to the binary, which finds them by $ORIGIN.
+    List<NativeLib> shared;
+    defer native_libs_free(&shared);
+    String platform;
+    defer String_free(&platform);
+    String_appendf(&platform, "linux-%s", linux_arch());
+    p.native_libs(platform.data, &shared);
+    native_copy_shared(&shared, out, "linux");
+#endif
     return binary;
 }
 
